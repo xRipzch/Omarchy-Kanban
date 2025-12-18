@@ -6,6 +6,7 @@ pub struct App {
     pub board: Board,
     pub selected_column: Column,
     pub selected_index: usize,
+    pub scroll_offset: usize,
     pub should_quit: bool,
     pub input_mode: InputMode,
     pub input_buffer: String,
@@ -29,6 +30,7 @@ impl App {
             board: storage::load_board(),
             selected_column: Column::Todo,
             selected_index: 0,
+            scroll_offset: 0,
             should_quit: false,
             input_mode: InputMode::Normal,
             input_buffer: String::new(),
@@ -70,8 +72,26 @@ impl App {
         let column_len = self.board.get_column(self.selected_column).len();
         if column_len == 0 {
             self.selected_index = 0;
+            self.scroll_offset = 0;
         } else if self.selected_index >= column_len {
             self.selected_index = column_len - 1;
+        }
+    }
+
+    // update scroll offset to keep selected item visible
+    pub fn update_scroll(&mut self, visible_items: usize) {
+        if visible_items == 0 {
+            return;
+        }
+
+        // scroll down if selected is below visible area
+        if self.selected_index >= self.scroll_offset + visible_items {
+            self.scroll_offset = self.selected_index - visible_items + 1;
+        }
+
+        // scroll up if selected is above visible area
+        if self.selected_index < self.scroll_offset {
+            self.scroll_offset = self.selected_index;
         }
     }
 

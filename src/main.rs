@@ -76,16 +76,40 @@ fn handle_normal_mode(app: &mut App, key: KeyCode) {
         KeyCode::Char('q') => app.should_quit = true,
 
         // Navigation - vim keys
-        KeyCode::Char('h') => app.move_left(),
-        KeyCode::Char('j') => app.move_down(),
-        KeyCode::Char('k') => app.move_up(),
-        KeyCode::Char('l') => app.move_right(),
+        KeyCode::Char('h') => {
+            app.move_left();
+            app.update_scroll(10); // assume ~10 items visible
+        }
+        KeyCode::Char('j') => {
+            app.move_down();
+            app.update_scroll(10);
+        }
+        KeyCode::Char('k') => {
+            app.move_up();
+            app.update_scroll(10);
+        }
+        KeyCode::Char('l') => {
+            app.move_right();
+            app.update_scroll(10);
+        }
 
         // Navigation - arrow keys
-        KeyCode::Left => app.move_left(),
-        KeyCode::Down => app.move_down(),
-        KeyCode::Up => app.move_up(),
-        KeyCode::Right => app.move_right(),
+        KeyCode::Left => {
+            app.move_left();
+            app.update_scroll(10);
+        }
+        KeyCode::Down => {
+            app.move_down();
+            app.update_scroll(10);
+        }
+        KeyCode::Up => {
+            app.move_up();
+            app.update_scroll(10);
+        }
+        KeyCode::Right => {
+            app.move_right();
+            app.update_scroll(10);
+        }
 
         // Actions
         KeyCode::Enter => app.open_task(),
@@ -122,11 +146,13 @@ fn handle_viewing_task_mode(app: &mut App, key: KeyCode) {
 // handle keys when editing description
 fn handle_editing_description_mode(app: &mut App, key: KeyCode) {
     match key {
-        KeyCode::Enter => app.submit_input(),
+        KeyCode::Enter => {
+            // Add newline in multi-line mode
+            app.input_char('\n');
+        }
         KeyCode::Esc => {
-            // Cancel editing and go back to viewing task
-            app.input_mode = InputMode::ViewingTask;
-            app.input_buffer.clear();
+            // Save description and return to viewing
+            app.submit_input();
         }
         KeyCode::Backspace => app.input_backspace(),
         KeyCode::Char(c) => app.input_char(c),

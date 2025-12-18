@@ -77,13 +77,21 @@ fn draw_column(f: &mut Frame, app: &App, column: Column, area: Rect) {
     let inner_area = outer_block.inner(area);
     f.render_widget(outer_block, area);
 
-    // calculate card height (4 lines: top border, padding, title, bottom border)
-    let card_height = 4;
+    // calculate card height (5 lines: top border, title, tags, padding, bottom border)
+    let card_height = 5;
     let card_spacing = 1; // space between cards
 
-    // render each task as a card
-    for (i, task) in tasks.iter().enumerate() {
-        let y_offset = i as u16 * (card_height + card_spacing);
+    // determine scroll offset for this column
+    let scroll_offset = if is_selected_column {
+        app.scroll_offset
+    } else {
+        0
+    };
+
+    // render each task as a card, starting from scroll_offset
+    let mut rendered = 0;
+    for (i, task) in tasks.iter().enumerate().skip(scroll_offset) {
+        let y_offset = rendered as u16 * (card_height + card_spacing);
 
         // stop if we run out of space
         if y_offset + card_height > inner_area.height {
@@ -98,6 +106,7 @@ fn draw_column(f: &mut Frame, app: &App, column: Column, area: Rect) {
         };
 
         draw_task_card(f, task, card_area, is_selected_column && i == app.selected_index);
+        rendered += 1;
     }
 }
 
@@ -127,36 +136,40 @@ fn draw_task_card(f: &mut Frame, task: &crate::board::Task, area: Rect, is_selec
     let inner = card_block.inner(area);
     f.render_widget(card_block, area);
 
-    // render task title and tags
-    if inner.height > 0 {
-        // build tag string for top-right corner
+    // render task title and tags on separate lines
+    if inner.height >= 2 {
+        // truncate title to fit width
+        let max_title_len = inner.width as usize;
+        let truncated_title: String = task.title.chars().take(max_title_len).collect();
+
+        // build tag string
         let tag_str = if !task.tags.is_empty() {
             format!("#{}", task.tags.join(" #"))
         } else {
             String::new()
         };
 
-        // calculate positions
-        let title_width = inner.width.saturating_sub(tag_str.len() as u16 + 1);
-
-        // create spans for title and tags
-        let mut spans = vec![
-            Span::styled(
-                format!("{:<width$}", task.title.chars().take(title_width as usize).collect::<String>(), width = title_width as usize),
-                Style::default().fg(if is_selected { Color::White } else { Color::White })
-            )
+        let mut lines = vec![
+            // Line 1: Title
+            Line::from(Span::styled(
+                truncated_title,
+                Style::default()
+                    .fg(Color::White)
+                    .add_modifier(if is_selected { Modifier::BOLD } else { Modifier::empty() })
+            ))
         ];
 
+        // Line 2: Tags (if any)
         if !tag_str.is_empty() {
-            spans.push(Span::styled(
+            lines.push(Line::from(Span::styled(
                 tag_str,
-                Style::default().fg(task.get_color()).add_modifier(Modifier::BOLD)
-            ));
+                Style::default()
+                    .fg(task.get_color())
+                    .add_modifier(Modifier::DIM)
+            )));
         }
 
-        let line = Line::from(spans);
-        let content = Paragraph::new(line);
-
+        let content = Paragraph::new(lines);
         f.render_widget(content, inner);
     }
 }
@@ -221,7 +234,7 @@ fn draw_task_detail(f: &mut Frame, app: &App) {
 
     // create main container with context-aware title
     let title = if is_editing {
-        " Task Details - EDITING DESCRIPTION (Enter to save, Esc to cancel) "
+        " Task Details - EDITING DESCRIPTION (Enter for newline, Esc to save) "
     } else {
         " Task Details (Press Esc to close, e to edit description) "
     };
