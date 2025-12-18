@@ -17,6 +17,9 @@ pub enum InputMode {
     Normal,
     AddingTask,
     AddingTag,
+    ViewingTask,
+    EditingDescription,
+    ViewingHelp,
 }
 
 impl App {
@@ -34,16 +37,16 @@ impl App {
 
     // move selection up
     pub fn move_up(&mut self) {
-        let column_len = self.board.get_column(self.selected_column).len();
-        if column_len > 0 && self.selected_index < column_len - 1 {
-            self.selected_index += 1;
+        if self.selected_index > 0 {
+            self.selected_index -= 1;
         }
     }
 
     // move selection down
     pub fn move_down(&mut self) {
-        if self.selected_index > 0 {
-            self.selected_index -= 1;
+        let column_len = self.board.get_column(self.selected_column).len();
+        if column_len > 0 && self.selected_index < column_len - 1 {
+            self.selected_index += 1;
         }
     }
 
@@ -141,8 +144,46 @@ impl App {
                     }
                 }
             }
-            InputMode::Normal => {}
+            InputMode::EditingDescription => {
+                let column = self.board.get_column_mut(self.selected_column);
+                if self.selected_index < column.len() {
+                    column[self.selected_index].description = self.input_buffer.clone();
+                    let _ = storage::save_board(&self.board);
+                }
+                self.input_mode = InputMode::ViewingTask;
+                self.input_buffer.clear();
+                return;
+            }
+            InputMode::Normal | InputMode::ViewingTask | InputMode::ViewingHelp => {}
         }
         self.cancel_input();
+    }
+
+    // open task detail view
+    pub fn open_task(&mut self) {
+        let column = self.board.get_column(self.selected_column);
+        if self.selected_index < column.len() {
+            self.input_mode = InputMode::ViewingTask;
+        }
+    }
+
+    // start editing description
+    pub fn start_editing_description(&mut self) {
+        let column = self.board.get_column(self.selected_column);
+        if self.selected_index < column.len() {
+            self.input_buffer = column[self.selected_index].description.clone();
+            self.input_mode = InputMode::EditingDescription;
+        }
+    }
+
+    // show help view
+    pub fn show_help(&mut self) {
+        self.input_mode = InputMode::ViewingHelp;
+    }
+
+    // close detail/help view
+    pub fn close_view(&mut self) {
+        self.input_mode = InputMode::Normal;
+        self.input_buffer.clear();
     }
 }

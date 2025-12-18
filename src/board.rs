@@ -1,11 +1,12 @@
 use serde::{Deserialize, Serialize};
 use ratatui::style::Color;
 
-//simple task with title and tag
+//simple task with title, tags, and description
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Task {
     pub title: String,
     pub tags: Vec<String>,
+    pub description: String,
 }
 
 impl Task {
@@ -14,6 +15,7 @@ impl Task {
         Self {
             title,
             tags: Vec::new(),
+            description: String::new(),
         }
     }
 
@@ -105,7 +107,7 @@ impl Column {
     }
 
     //return column name
-    pub fn name(self) -> &str {
+    pub fn name(self) -> &'static str {
         match self {
             Column::Todo => "To Do",
             Column::InProgress => "In Progress",
