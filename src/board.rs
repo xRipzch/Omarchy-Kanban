@@ -9,6 +9,22 @@ pub struct Task {
     pub description: String,
 }
 
+// project contains a name and a board
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Project {
+    pub name: String,
+    pub board: Board,
+}
+
+impl Project {
+    pub fn new(name: String) -> Self {
+        Self {
+            name,
+            board: Board::new(),
+        }
+    }
+}
+
 impl Task {
     //Create task
     pub fn new(title: String) -> Self {
@@ -41,7 +57,7 @@ impl Task {
 }
 
 // kanban board with three coloms: todo, in_progress, done
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Board {
     pub todo: Vec<Task>,
     pub in_progress: Vec<Task>,

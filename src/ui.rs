@@ -9,10 +9,10 @@ use ratatui::{
 };
 
 // render UI
-pub fn draw(f: &mut Frame, app: &App) {
+pub fn draw(f: &mut Frame, app: &mut App) {
     // check if we're in a special view mode
     match app.input_mode {
-        InputMode::ViewingTask | InputMode::EditingDescription => {
+        InputMode::ViewingTask | InputMode::EditingTitle | InputMode::EditingDescription => {
             draw_task_detail(f, app);
             return;
         }
@@ -20,27 +20,50 @@ pub fn draw(f: &mut Frame, app: &App) {
             draw_help(f, app);
             return;
         }
+        InputMode::ProjectList | InputMode::AddingProject => {
+            draw_project_list(f, app);
+            return;
+        }
         _ => {}
     }
 
-    // make two workspaces: main area and footer
+    // make three workspaces: header, main area, and footer
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
+            Constraint::Length(3),   // Header with project name
             Constraint::Min(0),      // Main area
             Constraint::Length(3),   // Footer
         ])
         .split(f.area());
 
-    // drwa the three columns
-    draw_columns(f, app, chunks[0]);
+    // draw header with project name
+    draw_header(f, app, chunks[0]);
+
+    // draw the three columns
+    draw_columns(f, app, chunks[1]);
 
     // footer with help text or input field
-    draw_footer(f, app, chunks[1]);
+    draw_footer(f, app, chunks[2]);
+}
+
+// draw header with project name
+fn draw_header(f: &mut Frame, app: &App, area: Rect) {
+    let project_name = app.project_name();
+    let header_text = vec![Line::from(vec![
+        Span::styled("Project: ", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+        Span::styled(project_name, Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
+        Span::styled("  (Ctrl+P to switch)", Style::default().fg(Color::DarkGray)),
+    ])];
+
+    let header = Paragraph::new(header_text)
+        .block(Block::default().borders(Borders::ALL));
+
+    f.render_widget(header, area);
 }
 
 // draw the three columns
-fn draw_columns(f: &mut Frame, app: &App, area: Rect) {
+fn draw_columns(f: &mut Frame, app: &mut App, area: Rect) {
     // split main area into three equal columns
     let columns = Layout::default()
         .direction(Direction::Horizontal)
@@ -58,8 +81,7 @@ fn draw_columns(f: &mut Frame, app: &App, area: Rect) {
 }
 
 /// draw single column with task cards
-fn draw_column(f: &mut Frame, app: &App, column: Column, area: Rect) {
-    let tasks = app.board.get_column(column);
+fn draw_column(f: &mut Frame, app: &mut App, column: Column, area: Rect) {
     let is_selected_column = app.selected_column == column;
 
     // highlight border if selected column
@@ -81,12 +103,20 @@ fn draw_column(f: &mut Frame, app: &App, column: Column, area: Rect) {
     let card_height = 5;
     let card_spacing = 1; // space between cards
 
-    // determine scroll offset for this column
+    // update visible items for selected column based on actual screen height
+    if is_selected_column {
+        app.set_visible_items(inner_area.height, card_height, card_spacing);
+    }
+
+    // determine scroll offset for this column (must get before borrowing tasks)
     let scroll_offset = if is_selected_column {
         app.scroll_offset
     } else {
         0
     };
+
+    // now get the tasks (immutable borrow)
+    let tasks = app.board().get_column(column);
 
     // render each task as a card, starting from scroll_offset
     let mut rendered = 0;
@@ -175,7 +205,7 @@ fn draw_task_card(f: &mut Frame, task: &crate::board::Task, area: Rect, is_selec
 }
 
 // draw footer with help text or input field
-fn draw_footer(f: &mut Frame, app: &App, area: Rect) {
+fn draw_footer(f: &mut Frame, app: &mut App, area: Rect) {
     let text = match app.input_mode {
         InputMode::Normal => {
             vec![
@@ -219,24 +249,27 @@ fn draw_footer(f: &mut Frame, app: &App, area: Rect) {
 }
 
 // draw task detail view
-fn draw_task_detail(f: &mut Frame, app: &App) {
+fn draw_task_detail(f: &mut Frame, app: &mut App) {
     let area = f.area();
 
     // get the selected task
-    let column = app.board.get_column(app.selected_column);
+    let column = app.board().get_column(app.selected_column);
     if app.selected_index >= column.len() {
         return;
     }
     let task = &column[app.selected_index];
 
-    // check if we're editing the description
-    let is_editing = app.input_mode == InputMode::EditingDescription;
+    // check what editing mode we're in
+    let is_editing_title = app.input_mode == InputMode::EditingTitle;
+    let is_editing_description = app.input_mode == InputMode::EditingDescription;
 
     // create main container with context-aware title
-    let title = if is_editing {
+    let title = if is_editing_title {
+        " Task Details - EDITING TITLE (Enter to save, Esc to cancel) "
+    } else if is_editing_description {
         " Task Details - EDITING DESCRIPTION (Enter for newline, Esc to save) "
     } else {
-        " Task Details (Press Esc to close, e to edit description) "
+        " Task Details (Tab: switch field | Enter: edit | 1-9: remove tag | Esc: close) "
     };
 
     let block = Block::default()
@@ -252,40 +285,75 @@ fn draw_task_detail(f: &mut Frame, app: &App) {
         .direction(Direction::Vertical)
         .constraints([
             Constraint::Length(3),  // Title
-            Constraint::Length(3),  // Tags
+            Constraint::Length(12), // Tags (enough for header + up to 9 tags)
             Constraint::Min(5),     // Description
         ])
         .split(inner);
 
-    // title section
-    let title_text = vec![
-        Line::from(vec![
-            Span::styled("Title: ", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
-            Span::raw(&task.title),
-        ]),
-    ];
-    let title_para = Paragraph::new(title_text)
-        .block(Block::default().borders(Borders::ALL));
-    f.render_widget(title_para, sections[0]);
+    // title section - show editable input if editing, otherwise show read-only
+    use crate::app::TaskField;
+    let is_title_focused = app.focused_field == TaskField::Title && !is_editing_title && !is_editing_description;
 
-    // tags section
-    let tags_str = if !task.tags.is_empty() {
-        task.tags.iter().map(|t| format!("#{}", t)).collect::<Vec<_>>().join(" ")
+    if is_editing_title {
+        let title_para = Paragraph::new(app.input_buffer.as_str())
+            .block(Block::default()
+                .borders(Borders::ALL)
+                .title("Title [EDITING]")
+                .border_style(Style::default().fg(Color::Yellow)))
+            .style(Style::default().bg(Color::DarkGray));
+        f.render_widget(title_para, sections[0]);
     } else {
-        String::from("No tags")
+        let title_text = vec![
+            Line::from(vec![
+                Span::styled("Title: ", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+                Span::raw(&task.title),
+            ]),
+        ];
+        let border_style = if is_title_focused {
+            Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
+        } else {
+            Style::default()
+        };
+        let title_para = Paragraph::new(title_text)
+            .block(Block::default().borders(Borders::ALL).border_style(border_style));
+        f.render_widget(title_para, sections[0]);
+    }
+
+    // tags section - show numbered tags for easy removal
+    let is_tags_focused = app.focused_field == TaskField::Tags && !is_editing_title && !is_editing_description;
+
+    let tags_lines = if !task.tags.is_empty() {
+        let mut lines = vec![
+            Line::from(vec![
+                Span::styled("Tags ", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+                Span::styled("(press 1-9 to remove):", Style::default().fg(Color::DarkGray)),
+            ])
+        ];
+        for (i, tag) in task.tags.iter().enumerate() {
+            if i < 9 {
+                lines.push(Line::from(vec![
+                    Span::styled(format!(" {} ", i + 1), Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
+                    Span::styled(format!("#{}", tag), Style::default().fg(task.get_color())),
+                ]));
+            }
+        }
+        lines
+    } else {
+        vec![Line::from(Span::styled("No tags", Style::default().fg(Color::DarkGray)))]
     };
-    let tags_text = vec![
-        Line::from(vec![
-            Span::styled("Tags: ", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
-            Span::styled(tags_str, Style::default().fg(task.get_color())),
-        ]),
-    ];
-    let tags_para = Paragraph::new(tags_text)
-        .block(Block::default().borders(Borders::ALL));
+    let border_style = if is_tags_focused {
+        Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
+    } else {
+        Style::default()
+    };
+    let tags_para = Paragraph::new(tags_lines)
+        .block(Block::default().borders(Borders::ALL).border_style(border_style));
     f.render_widget(tags_para, sections[1]);
 
     // description section - show input field if editing, otherwise show text
-    if is_editing {
+    let is_desc_focused = app.focused_field == TaskField::Description && !is_editing_title && !is_editing_description;
+
+    if is_editing_description {
         // Show editable input field
         let desc_para = Paragraph::new(app.input_buffer.as_str())
             .block(Block::default()
@@ -298,19 +366,24 @@ fn draw_task_detail(f: &mut Frame, app: &App) {
     } else {
         // Show read-only description
         let desc_text = if task.description.is_empty() {
-            "No description (press 'e' to add)"
+            "No description (press Enter to add)"
         } else {
             &task.description
         };
+        let border_style = if is_desc_focused {
+            Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
+        } else {
+            Style::default()
+        };
         let desc_para = Paragraph::new(desc_text)
-            .block(Block::default().borders(Borders::ALL).title("Description"))
+            .block(Block::default().borders(Borders::ALL).title("Description").border_style(border_style))
             .wrap(ratatui::widgets::Wrap { trim: false });
         f.render_widget(desc_para, sections[2]);
     }
 }
 
 // draw help view
-fn draw_help(f: &mut Frame, _app: &App) {
+fn draw_help(f: &mut Frame, _app: &mut App) {
     let area = f.area();
 
     let block = Block::default()
@@ -369,4 +442,89 @@ fn draw_help(f: &mut Frame, _app: &App) {
 
     let help_para = Paragraph::new(help_text);
     f.render_widget(help_para, inner);
+}
+
+// draw project list view
+fn draw_project_list(f: &mut Frame, app: &mut App) {
+    let area = f.area();
+
+    let is_adding = app.input_mode == InputMode::AddingProject;
+
+    let title = if is_adding {
+        " Projects - ADD NEW (Enter to save, Esc to cancel) "
+    } else {
+        " Projects (j/k: navigate | Enter: select | a: add | d: delete | Esc: cancel) "
+    };
+
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(Color::Cyan))
+        .title(title);
+
+    let inner = block.inner(area);
+    f.render_widget(block, area);
+
+    if is_adding {
+        // Show input for new project name
+        let input_area = Rect {
+            x: inner.x,
+            y: inner.y,
+            width: inner.width,
+            height: 3,
+        };
+
+        let input_text = vec![
+            Line::from(vec![
+                Span::styled("New Project Name: ", Style::default().fg(Color::Yellow)),
+                Span::raw(&app.input_buffer),
+            ]),
+        ];
+
+        let input_para = Paragraph::new(input_text)
+            .block(Block::default().borders(Borders::ALL).border_style(Style::default().fg(Color::Yellow)))
+            .style(Style::default().bg(Color::DarkGray));
+
+        f.render_widget(input_para, input_area);
+    } else {
+        // Show list of projects
+        let mut lines = vec![
+            Line::from(Span::styled("Select a project:", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))),
+            Line::from(""),
+        ];
+
+        for (i, project) in app.projects.iter().enumerate() {
+            let is_selected = i == app.selected_project_index;
+            let is_current = i == app.current_project;
+
+            let mut spans = vec![];
+
+            // Selection indicator
+            if is_selected {
+                spans.push(Span::styled("> ", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)));
+            } else {
+                spans.push(Span::raw("  "));
+            }
+
+            // Project name
+            let style = if is_current {
+                Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)
+            } else if is_selected {
+                Style::default().fg(Color::White).add_modifier(Modifier::BOLD)
+            } else {
+                Style::default().fg(Color::White)
+            };
+
+            spans.push(Span::styled(&project.name, style));
+
+            // Current indicator
+            if is_current {
+                spans.push(Span::styled(" (current)", Style::default().fg(Color::DarkGray)));
+            }
+
+            lines.push(Line::from(spans));
+        }
+
+        let list_para = Paragraph::new(lines);
+        f.render_widget(list_para, inner);
+    }
 }
