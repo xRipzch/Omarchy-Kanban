@@ -1,29 +1,32 @@
-# Omarchy Kanban Board
+# TUI Kanban Board
 
-A simple, lightweight TUI kanban board build for Omarchy.
+A simple, lightweight terminal-based kanban board built with Rust. Works on any Linux distribution.
 
 ## Features
 
-- **Three-column kanban board**: To Do, In Progress, Done
+- **Four-column kanban board**: To Do, In Progress, Testing, Done
+- **Multiple projects**: Organize tasks across different projects with easy switching (Ctrl+P)
 - **Tag system**: Categorize tasks with tags (urgent, bug, feature)
 - **Color-coded tasks**: Visual distinction based on tags
 - **Vim-style navigation**: Use hjkl or arrow keys
-- **Persistent storage**: Tasks are saved automatically to `~/.local/share/omarchy-kanban/board.json`
+- **Task detail view**: Edit titles, add/remove tags, write multi-line descriptions
+- **Bi-directional movement**: Move tasks forward and backward through columns
+- **Persistent storage**: Tasks are saved automatically to `~/.config/tui-kanban/projects.json`
 
 ## Installation
 
-### From AUR
+### From AUR (Arch-based distros)
 
 ```bash
 # Using yay
-yay -S omarchy-kanban-git
+yay -S tui-kanban-git
 
 # Using paru
-paru -S omarchy-kanban-git
+paru -S tui-kanban-git
 
 # Manual with makepkg
-git clone https://aur.archlinux.org/omarchy-kanban-git.git
-cd omarchy-kanban-git
+git clone https://aur.archlinux.org/tui-kanban-git.git
+cd tui-kanban-git
 makepkg -si
 ```
 
@@ -32,10 +35,10 @@ makepkg -si
 Requires Rust toolchain (rustc, cargo):
 
 ```bash
-git clone https://github.com/xRipzch/Omarchy-Kanban.git
-cd Omarchy-Kanban
+git clone https://github.com/xRipzch/TUI-Kanban.git
+cd TUI-Kanban
 cargo build --release
-sudo install -Dm755 target/release/omarchy-kanban /usr/local/bin/omarchy-kanban
+sudo install -Dm755 target/release/tui-kanban /usr/local/bin/tui-kanban
 ```
 
 ## Usage
@@ -43,23 +46,40 @@ sudo install -Dm755 target/release/omarchy-kanban /usr/local/bin/omarchy-kanban
 Run the application:
 
 ```bash
-omarchy-kanban
+tui-kanban
 ```
 
 ### Keyboard Shortcuts
 
 #### Normal Mode
 - **h/j/k/l** or **Arrow keys** - Navigate between columns and tasks
+- **Enter** - Open task details
 - **a** - Add a new task to the selected column
 - **t** - Add a tag to the selected task
-- **m** - Move the selected task to the next column (right)
+- **m** - Move task forward (TODO → IN PROGRESS → TESTING → DONE)
+- **n** - Move task backward (DONE → TESTING → IN PROGRESS → TODO)
 - **d** - Delete the selected task
+- **Ctrl+P** - Open project list
+- **?** - Show help
 - **q** - Quit the application
 
-#### Input Mode
-- **Enter** - Submit input (add task/tag)
-- **Esc** - Cancel input
+#### Task Detail View
+- **Tab** - Switch between fields (Title, Tags, Description)
+- **Enter** - Edit focused field
+- **1-9** - Remove tag by number (when Tags field is focused)
+- **Esc** - Close task detail view
+
+#### Editing Title/Description
+- **Enter** - Save title / Add newline in description
+- **Esc** - Save description / Cancel title edit
 - **Backspace** - Delete character
+
+#### Project List
+- **j/k** or **Arrow keys** - Navigate projects
+- **Enter** - Select project
+- **a** - Add new project
+- **d** - Delete project
+- **Esc** - Close project list
 
 ### Tags
 
@@ -71,11 +91,12 @@ The following tags have special colors:
 
 ## Data Storage
 
-Tasks are automatically saved to:
+Projects and tasks are automatically saved to:
 ```
-~/.local/share/omarchy-kanban/board.json
+~/.config/tui-kanban/projects.json
 ```
 
+If you're migrating from an older version, your data will be automatically migrated from the old location.
 
 ## Contributing
 
@@ -83,6 +104,6 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## Support
 
-For bugs and feature requests, please create an issue on the [GitHub repository](https://github.com/xRipzch/Omarchy-Kanban/issues).
+For bugs and feature requests, please create an issue on the [GitHub repository](https://github.com/xRipzch/TUI-Kanban/issues).
 
 ---
