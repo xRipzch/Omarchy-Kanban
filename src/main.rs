@@ -5,7 +5,7 @@ mod ui;
 
 use app::{App, InputMode};
 use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
+    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyModifiers},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -51,14 +51,25 @@ fn run_app<B: ratatui::backend::Backend>(
         
         // handle input
         if let Event::Key(key) = event::read()? {
+            // Handle Ctrl+P globally to open project list
+            if key.code == KeyCode::Char('p') && key.modifiers.contains(KeyModifiers::CONTROL) {
+                if app.input_mode == InputMode::Normal {
+                    app.open_project_list();
+                }
+                continue;
+            }
+
             match app.input_mode {
                 InputMode::Normal => handle_normal_mode(app, key.code),
                 InputMode::AddingTask | InputMode::AddingTag => {
                     handle_input_mode(app, key.code)
                 }
                 InputMode::ViewingTask => handle_viewing_task_mode(app, key.code),
+                InputMode::EditingTitle => handle_editing_title_mode(app, key.code),
                 InputMode::EditingDescription => handle_editing_description_mode(app, key.code),
                 InputMode::ViewingHelp => handle_viewing_help_mode(app, key.code),
+                InputMode::ProjectList => handle_project_list_mode(app, key.code),
+                InputMode::AddingProject => handle_adding_project_mode(app, key.code),
             }
         }
 
@@ -78,37 +89,37 @@ fn handle_normal_mode(app: &mut App, key: KeyCode) {
         // Navigation - vim keys
         KeyCode::Char('h') => {
             app.move_left();
-            app.update_scroll(10); // assume ~10 items visible
+            app.update_scroll();
         }
         KeyCode::Char('j') => {
             app.move_down();
-            app.update_scroll(10);
+            app.update_scroll();
         }
         KeyCode::Char('k') => {
             app.move_up();
-            app.update_scroll(10);
+            app.update_scroll();
         }
         KeyCode::Char('l') => {
             app.move_right();
-            app.update_scroll(10);
+            app.update_scroll();
         }
 
         // Navigation - arrow keys
         KeyCode::Left => {
             app.move_left();
-            app.update_scroll(10);
+            app.update_scroll();
         }
         KeyCode::Down => {
             app.move_down();
-            app.update_scroll(10);
+            app.update_scroll();
         }
         KeyCode::Up => {
             app.move_up();
-            app.update_scroll(10);
+            app.update_scroll();
         }
         KeyCode::Right => {
             app.move_right();
-            app.update_scroll(10);
+            app.update_scroll();
         }
 
         // Actions
@@ -136,9 +147,44 @@ fn handle_input_mode(app: &mut App, key: KeyCode) {
 
 // handle keys when viewing task details
 fn handle_viewing_task_mode(app: &mut App, key: KeyCode) {
+    use app::TaskField;
+
     match key {
         KeyCode::Esc => app.close_view(),
-        KeyCode::Char('e') => app.start_editing_description(),
+        KeyCode::Tab => app.next_field(),
+        KeyCode::Enter => {
+            // Start editing based on focused field
+            match app.focused_field {
+                TaskField::Title => app.start_editing_title(),
+                TaskField::Description => app.start_editing_description(),
+                TaskField::Tags => {} // No action for tags, use numbers instead
+            }
+        }
+        KeyCode::Char(c @ '1'..='9') => {
+            // Remove tag by number (only when focused on tags)
+            if app.focused_field == TaskField::Tags {
+                let tag_index = (c as u8 - b'1') as usize;
+                app.remove_tag(tag_index);
+            }
+        }
+        _ => {}
+    }
+}
+
+// handle keys when editing title
+fn handle_editing_title_mode(app: &mut App, key: KeyCode) {
+    match key {
+        KeyCode::Enter => {
+            // Save title and return to viewing
+            app.submit_input();
+        }
+        KeyCode::Esc => {
+            // Cancel editing and go back to viewing task
+            app.input_mode = InputMode::ViewingTask;
+            app.input_buffer.clear();
+        }
+        KeyCode::Backspace => app.input_backspace(),
+        KeyCode::Char(c) => app.input_char(c),
         _ => {}
     }
 }
@@ -164,6 +210,33 @@ fn handle_editing_description_mode(app: &mut App, key: KeyCode) {
 fn handle_viewing_help_mode(app: &mut App, key: KeyCode) {
     match key {
         KeyCode::Esc | KeyCode::Char('?') => app.close_view(),
+        _ => {}
+    }
+}
+
+// handle keys in project list mode
+fn handle_project_list_mode(app: &mut App, key: KeyCode) {
+    match key {
+        KeyCode::Esc => app.close_view(),
+        KeyCode::Char('j') | KeyCode::Down => app.move_project_down(),
+        KeyCode::Char('k') | KeyCode::Up => app.move_project_up(),
+        KeyCode::Enter => app.select_project(),
+        KeyCode::Char('a') => app.start_adding_project(),
+        KeyCode::Char('d') => app.delete_project(),
+        _ => {}
+    }
+}
+
+// handle keys when adding project
+fn handle_adding_project_mode(app: &mut App, key: KeyCode) {
+    match key {
+        KeyCode::Enter => app.submit_input(),
+        KeyCode::Esc => {
+            app.input_mode = InputMode::ProjectList;
+            app.input_buffer.clear();
+        }
+        KeyCode::Backspace => app.input_backspace(),
+        KeyCode::Char(c) => app.input_char(c),
         _ => {}
     }
 }
