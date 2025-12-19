@@ -76,35 +76,6 @@ Tasks are automatically saved to:
 ~/.local/share/omarchy-kanban/board.json
 ```
 
-## Building for Distribution
-
-### Release Build
-
-```bash
-cargo build --release
-```
-
-The optimized binary will be at `target/release/omarchy-kanban` (~1.2 MB).
-
-### Stripping Debug Symbols
-
-To reduce binary size:
-
-```bash
-strip target/release/omarchy-kanban
-```
-
-## Dependencies
-
-Runtime dependencies:
-- `gcc-libs` (glibc) - Standard on all Linux systems
-
-Build dependencies:
-- Rust 1.70+ (rustc, cargo)
-
-## License
-
-[Specify your license here - MIT, GPL-3.0, etc.]
 
 ## Contributing
 
