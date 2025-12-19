@@ -2,6 +2,9 @@
 
 A simple, lightweight TUI kanban board build for Omarchy.
 
+<img width="890" height="626" alt="screenshot-2025-12-19_10-55-11" src="https://github.com/user-attachments/assets/c60ac7b3-20dc-4795-8615-0fa59d86e6ee" />
+
+
 ## Features
 
 - **Three-column kanban board**: To Do, In Progress, Done
@@ -75,6 +78,10 @@ Tasks are automatically saved to:
 ```
 ~/.local/share/omarchy-kanban/board.json
 ```
+
+
+https://github.com/user-attachments/assets/7ce3be1e-343d-4f08-98af-0baf996e2fef
+
 
 
 ## Contributing
