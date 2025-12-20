@@ -8,14 +8,15 @@ A simple, lightweight terminal-based kanban board built with Rust. Works on any 
 
 ## Features
 
-- **Four-column kanban board**: To Do, In Progress, Testing, Done
+- **Customizable columns**: Create, rename, and delete columns to match your workflow (default: To Do, In Progress, Testing, Done)
 - **Multiple projects**: Organize tasks across different projects with easy switching (Ctrl+P)
-- **Tag system**: Categorize tasks with tags (urgent, bug, feature)
+- **Tag system**: Categorize tasks with tags (urgent, bug, feature, and more)
 - **Color-coded tasks**: Visual distinction based on tags
 - **Vim-style navigation**: Use hjkl or arrow keys
 - **Task detail view**: Edit titles, add/remove tags, write multi-line descriptions
 - **Bi-directional movement**: Move tasks forward and backward through columns
 - **Persistent storage**: Tasks are saved automatically to `~/.config/tui-kanban/projects.json`
+- **CI/CD**: Automated testing with GitHub Actions
 
 ## Installation
 
@@ -63,6 +64,9 @@ tui-kanban
 - **m** - Move task forward (TODO → IN PROGRESS → TESTING → DONE)
 - **n** - Move task backward (DONE → TESTING → IN PROGRESS → TODO)
 - **d** - Delete the selected task
+- **Shift+C** - Add a new column
+- **Shift+R** - Rename current column
+- **Shift+D** - Delete current column (must be empty)
 - **Ctrl+P** - Open project list
 - **?** - Show help
 - **q** - Quit the application
@@ -114,6 +118,11 @@ If you're migrating from an older version, your data will be automatically migra
 https://github.com/user-attachments/assets/fa467298-e3c5-4770-b4b5-c40280f6f9ab
 
 
+
+## Contributors
+
+Special thanks to:
+- [@mdetweil](https://github.com/mdetweil) - Customizable columns feature, tests, and CI/CD setup
 
 ## Contributing
 
