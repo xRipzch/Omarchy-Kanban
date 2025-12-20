@@ -6,7 +6,7 @@ pub struct App {
     pub projects: Vec<Project>,
     pub current_project: usize,
     pub selected_project_index: usize, // for project list view
-    pub selected_column: usize,        // Changed from Column enum to usize
+    pub selected_column: usize,
     pub selected_index: usize,
     pub scroll_offset: usize,
     pub visible_items: usize,
@@ -14,6 +14,7 @@ pub struct App {
     pub input_mode: InputMode,
     pub input_buffer: String,
     pub focused_field: TaskField,
+    pub disable_saving: bool, // For testing
 }
 
 // which field is focused in task detail view
@@ -36,8 +37,8 @@ pub enum InputMode {
     ViewingHelp,
     ProjectList,
     AddingProject,
-    AddingColumn,   // New
-    RenamingColumn, // New
+    AddingColumn,
+    RenamingColumn,
 }
 
 impl App {
@@ -55,6 +56,24 @@ impl App {
             input_mode: InputMode::Normal,
             input_buffer: String::new(),
             focused_field: TaskField::Title,
+            disable_saving: false,
+        }
+    }
+
+    pub fn new_with_projects(projects: Vec<Project>) -> Self {
+        Self {
+            projects,
+            current_project: 0,
+            selected_project_index: 0,
+            selected_column: 0,
+            selected_index: 0,
+            scroll_offset: 0,
+            visible_items: 5,
+            should_quit: false,
+            input_mode: InputMode::Normal,
+            input_buffer: String::new(),
+            focused_field: TaskField::Title,
+            disable_saving: true,
         }
     }
 
@@ -75,6 +94,9 @@ impl App {
 
     // save current state
     fn save(&self) {
+        if self.disable_saving {
+            return;
+        }
         let _ = storage::save_projects(&self.projects);
     }
 
@@ -384,7 +406,6 @@ impl App {
             InputMode::AddingColumn => {
                 if !self.input_buffer.is_empty() {
                     let name = self.input_buffer.clone();
-                    // Simple ID generation: slugify name or random? For now, just use name as ID for simplicity or generate a simple one.
                     let id = name.to_lowercase().replace(" ", "_");
                     let new_column = BoardColumn::new(id, name);
                     self.board_mut().columns.push(new_column);
@@ -516,5 +537,171 @@ impl App {
     pub fn close_view(&mut self) {
         self.input_mode = InputMode::Normal;
         self.input_buffer.clear();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::board::{BoardColumn, Task, Project, Board};
+
+    fn create_test_app() -> App {
+        let board = Board {
+            columns: vec![
+                BoardColumn {
+                    id: "col1".to_string(),
+                    name: "Column 1".to_string(),
+                    tasks: vec![
+                        Task::new("Task 1".to_string()),
+                        Task::new("Task 2".to_string()),
+                    ],
+                },
+                BoardColumn {
+                    id: "col2".to_string(),
+                    name: "Column 2".to_string(),
+                    tasks: vec![],
+                },
+            ],
+        };
+        let project = Project {
+            name: "Test Project".to_string(),
+            board,
+        };
+        App::new_with_projects(vec![project])
+    }
+
+    #[test]
+    fn test_navigation() {
+        let mut app = create_test_app();
+        
+        // Initial state
+        assert_eq!(app.selected_column, 0);
+        assert_eq!(app.selected_index, 0);
+
+        // Move down
+        app.move_down();
+        assert_eq!(app.selected_index, 1);
+        
+        // Move down (clamped)
+        app.move_down();
+        assert_eq!(app.selected_index, 1); // Should stay at last item
+
+        // Move up
+        app.move_up();
+        assert_eq!(app.selected_index, 0);
+
+        // Move right
+        app.move_right();
+        assert_eq!(app.selected_column, 1);
+        assert_eq!(app.selected_index, 0); // Reset index on empty column (clamped)
+
+        // Move left
+        app.move_left();
+        assert_eq!(app.selected_column, 0);
+    }
+
+    #[test]
+    fn test_task_movement() {
+        let mut app = create_test_app();
+
+        // Move Task 1 forward (Col 1 -> Col 2)
+        app.move_task_forward();
+        
+        // Check Col 1
+        assert_eq!(app.board().columns[0].tasks.len(), 1);
+        assert_eq!(app.board().columns[0].tasks[0].title, "Task 2");
+
+        // Check Col 2
+        assert_eq!(app.board().columns[1].tasks.len(), 1);
+        assert_eq!(app.board().columns[1].tasks[0].title, "Task 1");
+
+        // Move Task 2 forward (Col 1 -> Col 2)
+        app.selected_index = 0; // ensure selection
+        app.move_task_forward();
+        
+        // Check Col 1 empty
+        assert!(app.board().columns[0].tasks.is_empty());
+        
+        // Check Col 2 has 2 tasks
+        assert_eq!(app.board().columns[1].tasks.len(), 2);
+    }
+
+    #[test]
+    fn test_delete_task() {
+        let mut app = create_test_app();
+        
+        app.delete_task();
+        assert_eq!(app.board().columns[0].tasks.len(), 1);
+        assert_eq!(app.board().columns[0].tasks[0].title, "Task 2");
+    }
+
+    #[test]
+    fn test_add_column() {
+        let mut app = create_test_app();
+        app.input_buffer = "Column 3".to_string();
+        app.input_mode = InputMode::AddingColumn;
+        
+        app.submit_input(); // This simulates pressing Enter
+        
+        assert_eq!(app.board().columns.len(), 3);
+        assert_eq!(app.board().columns[2].name, "Column 3");
+    }
+
+    #[test]
+    fn test_rename_column() {
+        let mut app = create_test_app();
+        app.selected_column = 0;
+        app.input_buffer = "Renamed 1".to_string();
+        app.input_mode = InputMode::RenamingColumn;
+        
+        app.submit_input();
+        
+        assert_eq!(app.board().columns[0].name, "Renamed 1");
+    }
+
+    #[test]
+    fn test_delete_column() {
+        let mut app = create_test_app();
+        
+        // Cannot delete non-empty column (simplified logic check)
+        app.selected_column = 0;
+        app.delete_column();
+        assert_eq!(app.board().columns.len(), 2); // Should still be 2
+
+        // Delete empty column (Col 2)
+        app.selected_column = 1;
+        app.delete_column();
+        assert_eq!(app.board().columns.len(), 1);
+        assert_eq!(app.board().columns[0].name, "Column 1");
+        
+        // Cannot delete last remaining column
+        app.delete_column(); // Even if empty (it's not here, but let's clear it)
+        
+        // Clear tasks to try deleting last column
+        app.delete_task();
+        app.delete_task();
+        assert!(app.board().columns[0].tasks.is_empty());
+        
+        app.delete_column(); 
+        assert_eq!(app.board().columns.len(), 1); // Should guard against deleting the last column
+    }
+
+    #[test]
+    fn test_move_column() {
+        let mut app = create_test_app();
+        
+        // Move Col 2 Left -> becomes Col 1
+        app.selected_column = 1;
+        app.move_column_left();
+        
+        assert_eq!(app.board().columns[0].name, "Column 2");
+        assert_eq!(app.board().columns[1].name, "Column 1");
+        assert_eq!(app.selected_column, 0); // Selection should follow
+
+        // Move Col 1 (now "Column 2") Right -> becomes Col 2
+        app.move_column_right();
+        assert_eq!(app.board().columns[0].name, "Column 1");
+        assert_eq!(app.board().columns[1].name, "Column 2");
+        assert_eq!(app.selected_column, 1);
     }
 }

@@ -59,35 +59,6 @@ impl Task {
             _ => Color::White,
         }
     }
-
-    // return color based on tags (for backward compatibility)
-    // pub fn get_color(&self) -> Color { // Removed as unused
-    //     if self.tags.contains(&"urgent".to_string()) {
-    //         Color::Red
-    //     } else if self.tags.contains(&"security".to_string()) {
-    //         Color::LightRed
-    //     } else if self.tags.contains(&"bug".to_string()) {
-    //         Color::Yellow
-    //     } else if self.tags.contains(&"feature".to_string()) {
-    //         Color::Green
-    //     } else if self.tags.contains(&"performance".to_string()) {
-    //         Color::LightGreen
-    //     } else if self.tags.contains(&"enhancement".to_string()) {
-    //         Color::Blue
-    //     } else if self.tags.contains(&"User".to_string()) {
-    //         Color::LightBlue
-    //     } else if self.tags.contains(&"Dev".to_string()) {
-    //         Color::Magenta
-    //     } else if self.tags.contains(&"documentation".to_string()) {
-    //         Color::Cyan
-    //     } else if self.tags.contains(&"design".to_string()) {
-    //         Color::LightCyan
-    //     } else if self.tags.contains(&"refactor".to_string()) {
-    //         Color::LightYellow
-    //     } else {
-    //         Color::White
-    //     }
-    // }
 }
 
 // A single column in the board
@@ -135,5 +106,54 @@ impl Board {
     // get column by index (Mutable)
     pub fn get_column_mut(&mut self, index: usize) -> Option<&mut BoardColumn> {
         self.columns.get_mut(index)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ratatui::style::Color;
+
+    #[test]
+    fn test_task_creation() {
+        let task = Task::new("Test Task".to_string());
+        assert_eq!(task.title, "Test Task");
+        assert!(task.tags.is_empty());
+        assert!(task.description.is_empty());
+    }
+
+    #[test]
+    fn test_task_add_tag() {
+        let mut task = Task::new("Task".to_string());
+        task.add_tag("bug".to_string());
+        task.add_tag("urgent".to_string());
+        task.add_tag("bug".to_string()); // Duplicate
+
+        assert_eq!(task.tags.len(), 2);
+        assert!(task.tags.contains(&"bug".to_string()));
+        assert!(task.tags.contains(&"urgent".to_string()));
+    }
+
+    #[test]
+    fn test_tag_colors() {
+        assert_eq!(Task::get_tag_color("urgent"), Color::Red);
+        assert_eq!(Task::get_tag_color("feature"), Color::Green);
+        assert_eq!(Task::get_tag_color("unknown_tag"), Color::White);
+    }
+
+    #[test]
+    fn test_board_creation() {
+        let board = Board::new();
+        assert_eq!(board.columns.len(), 4);
+        assert_eq!(board.columns[0].name, "To Do");
+        assert_eq!(board.columns[3].name, "Done");
+    }
+
+    #[test]
+    fn test_board_column_creation() {
+        let col = BoardColumn::new("col_id".to_string(), "Column Name".to_string());
+        assert_eq!(col.id, "col_id");
+        assert_eq!(col.name, "Column Name");
+        assert!(col.tasks.is_empty());
     }
 }
