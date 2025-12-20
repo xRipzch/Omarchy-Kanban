@@ -1,6 +1,6 @@
 # Maintainer: xRipzch
 pkgname=tui-kanban
-pkgver=0.4.0
+pkgver=0.4.1
 pkgrel=1
 pkgdesc="A simple, lightweight terminal-based kanban board built with Rust"
 arch=('x86_64')
