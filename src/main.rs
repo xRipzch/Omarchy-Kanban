@@ -239,6 +239,7 @@ fn handle_project_list_mode(app: &mut App, key: KeyCode) {
         KeyCode::Enter => app.select_project(),
         KeyCode::Char('a') => app.start_adding_project(),
         KeyCode::Char('d') => app.delete_project(),
+        KeyCode::Char('s') => app.set_project_as_default(),
         _ => {}
     }
 }
