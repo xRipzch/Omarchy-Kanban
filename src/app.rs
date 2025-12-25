@@ -44,10 +44,16 @@ pub enum InputMode {
 impl App {
     // create new app state
     pub fn new() -> Self {
+        let projects = storage::load_projects();
+        let config = storage::load_config();
+
+        // Determine which project to start with
+        let current_project = Self::determine_initial_project(&projects, &config);
+
         Self {
-            projects: storage::load_projects(),
-            current_project: 0,
-            selected_project_index: 0,
+            projects,
+            current_project,
+            selected_project_index: current_project,
             selected_column: 0, // Default to the first column
             selected_index: 0,
             scroll_offset: 0,
@@ -58,6 +64,29 @@ impl App {
             focused_field: TaskField::Title,
             disable_saving: false,
         }
+    }
+
+    // Determine which project to start with based on priority:
+    // 1. Directory-specific .tui-kanban-project file
+    // 2. Global default from config.json
+    // 3. First project (index 0)
+    fn determine_initial_project(projects: &[Project], config: &storage::Config) -> usize {
+        // Priority 1: Check for directory-specific project file
+        if let Some(dir_project_name) = storage::get_directory_project() {
+            if let Some(index) = projects.iter().position(|p| p.name == dir_project_name) {
+                return index;
+            }
+        }
+
+        // Priority 2: Check config for default project
+        if let Some(default_name) = &config.default_project {
+            if let Some(index) = projects.iter().position(|p| p.name == *default_name) {
+                return index;
+            }
+        }
+
+        // Priority 3: Default to first project
+        0
     }
 
     pub fn new_with_projects(projects: Vec<Project>) -> Self {
@@ -526,6 +555,14 @@ impl App {
             }
             self.save();
         }
+    }
+
+    pub fn set_project_as_default(&mut self) {
+        let project_name = self.projects[self.selected_project_index].name.clone();
+        let config = storage::Config {
+            default_project: Some(project_name),
+        };
+        let _ = storage::save_config(&config);
     }
 
     // show help view

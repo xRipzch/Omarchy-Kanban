@@ -661,6 +661,17 @@ fn draw_help(f: &mut Frame, _app: &mut App) {
         ]),
         Line::from(""),
         Line::from(vec![Span::styled(
+            "Project Management:",
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        )]),
+        Line::from("  Ctrl+P : Open project list"),
+        Line::from("  a      : Add new project (in project list)"),
+        Line::from("  d      : Delete project (in project list)"),
+        Line::from("  s      : Set selected project as default (in project list)"),
+        Line::from(""),
+        Line::from(vec![Span::styled(
             "Other:",
             Style::default()
                 .fg(Color::Yellow)
