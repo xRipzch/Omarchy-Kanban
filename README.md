@@ -147,7 +147,32 @@ When you run `tui-kanban` from that directory, it will automatically open "MyPro
 
 https://github.com/user-attachments/assets/fa467298-e3c5-4770-b4b5-c40280f6f9ab
 
+## Themes
 
+TUI-Kanban supports multiple color themes to match your terminal preferences and improve readability. You can change the theme by editing your config file.
+
+### Available Themes
+
+- **high-contrast** (Default) - Bright, bold colors for maximum visibility on any terminal theme
+- **classic** - Traditional color scheme with improved contrast over the original
+- **solarized-dark** - Popular Solarized palette designed for reduced eye strain
+- **gruvbox** - Warm, retro color scheme with earthy tones
+- **nord** - Cool, arctic-inspired colors from the Nord palette
+
+### Changing Your Theme
+
+Edit your configuration file at `~/.config/tui-kanban/config.json` (Linux/macOS) or `%APPDATA%\tui-kanban\config.json` (Windows):
+
+```json
+{
+  "theme": "nord",
+  "default_project": "Work"
+}
+```
+
+Available theme names: `high-contrast`, `classic`, `solarized-dark`, `gruvbox`, `nord`
+
+Changes take effect the next time you launch tui-kanban. If the theme name is invalid or not specified, it will default to `high-contrast`.
 
 ## Contributors
 

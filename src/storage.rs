@@ -8,6 +8,7 @@ use std::path::PathBuf;
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct Config {
     pub default_project: Option<String>,
+    pub theme: Option<String>,
 }
 
 // This struct represents the old Board structure for migration purposes
@@ -191,6 +192,7 @@ pub fn load_config() -> Config {
     // Return default config if file doesn't exist or can't be read
     Config {
         default_project: None,
+        theme: Some("high-contrast".to_string()),
     }
 }
 

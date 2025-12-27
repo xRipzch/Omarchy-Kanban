@@ -61,16 +61,19 @@ fn draw_header(f: &mut Frame, app: &App, area: Rect) {
         Span::styled(
             "Project: ",
             Style::default()
-                .fg(Color::Cyan)
+                .fg(app.theme.secondary)
                 .add_modifier(Modifier::BOLD),
         ),
         Span::styled(
             project_name,
             Style::default()
-                .fg(Color::Yellow)
+                .fg(app.theme.accent)
                 .add_modifier(Modifier::BOLD),
         ),
-        Span::styled("  (Ctrl+P to switch)", Style::default().fg(Color::DarkGray)),
+        Span::styled(
+            "  (Ctrl+P to switch)",
+            Style::default().fg(app.theme.text_secondary),
+        ),
     ])];
 
     let header = Paragraph::new(header_text).block(Block::default().borders(Borders::ALL));
@@ -133,10 +136,10 @@ fn draw_column(
     // highlight border if selected column
     let border_style = if is_selected_column {
         Style::default()
-            .fg(Color::Cyan)
+            .fg(app.theme.border_focused)
             .add_modifier(Modifier::BOLD)
     } else {
-        Style::default()
+        Style::default().fg(app.theme.border_normal)
     };
 
     let outer_block = Block::default()
@@ -182,6 +185,7 @@ fn draw_column(
 
         draw_task_card(
             f,
+            app,
             task,
             card_area,
             is_selected_column && i == app.selected_index,
@@ -191,20 +195,20 @@ fn draw_column(
 }
 
 /// draw a single task card
-fn draw_task_card(f: &mut Frame, task: &Task, area: Rect, is_selected: bool) {
+fn draw_task_card(f: &mut Frame, app: &App, task: &Task, area: Rect, is_selected: bool) {
     // Changed crate::board::Task to Task
     // card border style
     let border_style = if is_selected {
         Style::default()
-            .fg(Color::Cyan)
+            .fg(app.theme.border_focused)
             .add_modifier(Modifier::BOLD)
     } else {
-        Style::default().fg(Color::Gray)
+        Style::default().fg(app.theme.border_normal)
     };
 
     // background color for selected task
     let bg_color = if is_selected {
-        Color::DarkGray
+        app.theme.background_selected
     } else {
         Color::Reset
     };
@@ -228,7 +232,7 @@ fn draw_task_card(f: &mut Frame, task: &Task, area: Rect, is_selected: bool) {
             Line::from(Span::styled(
                 truncated_title,
                 Style::default()
-                    .fg(Color::White)
+                    .fg(app.theme.text_primary)
                     .add_modifier(if is_selected {
                         Modifier::BOLD
                     } else {
@@ -244,7 +248,7 @@ fn draw_task_card(f: &mut Frame, task: &Task, area: Rect, is_selected: bool) {
                 tag_spans.push(Span::styled(
                     format!("#{} ", tag),
                     Style::default()
-                        .fg(crate::board::Task::get_tag_color(tag))
+                        .fg(app.theme.get_tag_color(tag))
                         .add_modifier(Modifier::DIM),
                 ));
             }
@@ -275,7 +279,7 @@ fn draw_footer(f: &mut Frame, app: &mut App, area: Rect) {
         InputMode::AddingTask => {
             vec![
                 Line::from(vec![
-                    Span::styled("Add Task: ", Style::default().fg(Color::Yellow)),
+                    Span::styled("Add Task: ", Style::default().fg(app.theme.accent)),
                     Span::raw(&app.input_buffer),
                 ]),
                 Line::from("Press Enter to submit, Esc to cancel"),
@@ -284,7 +288,7 @@ fn draw_footer(f: &mut Frame, app: &mut App, area: Rect) {
         InputMode::AddingTag => {
             vec![
                 Line::from(vec![
-                    Span::styled("Add Tag: ", Style::default().fg(Color::Yellow)),
+                    Span::styled("Add Tag: ", Style::default().fg(app.theme.accent)),
                     Span::raw(&app.input_buffer),
                 ]),
                 Line::from("Press Enter to submit, Esc to cancel"),
@@ -293,7 +297,7 @@ fn draw_footer(f: &mut Frame, app: &mut App, area: Rect) {
         InputMode::AddingColumn => {
             vec![
                 Line::from(vec![
-                    Span::styled("Add Column: ", Style::default().fg(Color::Yellow)),
+                    Span::styled("Add Column: ", Style::default().fg(app.theme.accent)),
                     Span::raw(&app.input_buffer),
                 ]),
                 Line::from("Press Enter to submit, Esc to cancel"),
@@ -302,7 +306,7 @@ fn draw_footer(f: &mut Frame, app: &mut App, area: Rect) {
         InputMode::RenamingColumn => {
             vec![
                 Line::from(vec![
-                    Span::styled("Rename Column: ", Style::default().fg(Color::Yellow)),
+                    Span::styled("Rename Column: ", Style::default().fg(app.theme.accent)),
                     Span::raw(&app.input_buffer),
                 ]),
                 Line::from("Press Enter to submit, Esc to cancel"),
@@ -346,7 +350,7 @@ fn draw_task_detail(f: &mut Frame, app: &mut App) {
 
     let block = Block::default()
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::Cyan))
+        .border_style(Style::default().fg(app.theme.primary))
         .title(title);
 
     let inner = block.inner(area);
@@ -373,23 +377,23 @@ fn draw_task_detail(f: &mut Frame, app: &mut App) {
                 Block::default()
                     .borders(Borders::ALL)
                     .title("Title [EDITING]")
-                    .border_style(Style::default().fg(Color::Yellow)),
+                    .border_style(Style::default().fg(app.theme.accent)),
             )
-            .style(Style::default().bg(Color::DarkGray));
+            .style(Style::default().bg(app.theme.background_selected));
         f.render_widget(title_para, sections[0]);
     } else {
         let title_text = vec![Line::from(vec![
             Span::styled(
                 "Title: ",
                 Style::default()
-                    .fg(Color::Cyan)
+                    .fg(app.theme.primary)
                     .add_modifier(Modifier::BOLD),
             ),
             Span::raw(&task.title),
         ])];
         let border_style = if is_title_focused {
             Style::default()
-                .fg(Color::Yellow)
+                .fg(app.theme.accent)
                 .add_modifier(Modifier::BOLD)
         } else {
             Style::default()
@@ -411,12 +415,12 @@ fn draw_task_detail(f: &mut Frame, app: &mut App) {
             Span::styled(
                 "Tags ",
                 Style::default()
-                    .fg(Color::Cyan)
+                    .fg(app.theme.primary)
                     .add_modifier(Modifier::BOLD),
             ),
             Span::styled(
                 "(press 1-9 to remove):",
-                Style::default().fg(Color::DarkGray),
+                Style::default().fg(app.theme.text_secondary),
             ),
         ])];
         for (i, tag) in task.tags.iter().enumerate() {
@@ -425,12 +429,12 @@ fn draw_task_detail(f: &mut Frame, app: &mut App) {
                     Span::styled(
                         format!(" {} ", i + 1),
                         Style::default()
-                            .fg(Color::Yellow)
+                            .fg(app.theme.accent)
                             .add_modifier(Modifier::BOLD),
                     ),
                     Span::styled(
                         format!("#{}", tag),
-                        Style::default().fg(crate::board::Task::get_tag_color(tag)),
+                        Style::default().fg(app.theme.get_tag_color(tag)),
                     ),
                 ]));
             }
@@ -439,12 +443,12 @@ fn draw_task_detail(f: &mut Frame, app: &mut App) {
     } else {
         vec![Line::from(Span::styled(
             "No tags",
-            Style::default().fg(Color::DarkGray),
+            Style::default().fg(app.theme.text_secondary),
         ))]
     };
     let border_style = if is_tags_focused {
         Style::default()
-            .fg(Color::Yellow)
+            .fg(app.theme.accent)
             .add_modifier(Modifier::BOLD)
     } else {
         Style::default()
@@ -467,10 +471,10 @@ fn draw_task_detail(f: &mut Frame, app: &mut App) {
                 Block::default()
                     .borders(Borders::ALL)
                     .title("Description [EDITING]")
-                    .border_style(Style::default().fg(Color::Yellow)),
+                    .border_style(Style::default().fg(app.theme.accent)),
             )
             .wrap(Wrap { trim: false })
-            .style(Style::default().bg(Color::DarkGray));
+            .style(Style::default().bg(app.theme.background_selected));
         f.render_widget(desc_para, sections[2]);
     } else {
         // Show read-only description
@@ -481,7 +485,7 @@ fn draw_task_detail(f: &mut Frame, app: &mut App) {
         };
         let border_style = if is_desc_focused {
             Style::default()
-                .fg(Color::Yellow)
+                .fg(app.theme.accent)
                 .add_modifier(Modifier::BOLD)
         } else {
             Style::default()
@@ -499,12 +503,12 @@ fn draw_task_detail(f: &mut Frame, app: &mut App) {
 }
 
 // draw help view
-fn draw_help(f: &mut Frame, _app: &mut App) {
+fn draw_help(f: &mut Frame, app: &mut App) {
     let area = f.area();
 
     let block = Block::default()
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::Cyan))
+        .border_style(Style::default().fg(app.theme.primary))
         .title(" Help (Press Esc or ? to close) ");
 
     let inner = block.inner(area);
@@ -515,7 +519,7 @@ fn draw_help(f: &mut Frame, _app: &mut App) {
         Line::from(vec![Span::styled(
             "Navigation:",
             Style::default()
-                .fg(Color::Yellow)
+                .fg(app.theme.accent)
                 .add_modifier(Modifier::BOLD),
         )]),
         Line::from("  h/← : Move left (previous column)"),
@@ -526,7 +530,7 @@ fn draw_help(f: &mut Frame, _app: &mut App) {
         Line::from(vec![Span::styled(
             "Column Management:",
             Style::default()
-                .fg(Color::Yellow)
+                .fg(app.theme.accent)
                 .add_modifier(Modifier::BOLD),
         )]),
         Line::from("  Shift+C : Add new column"),
@@ -538,7 +542,7 @@ fn draw_help(f: &mut Frame, _app: &mut App) {
         Line::from(vec![Span::styled(
             "Task Management:",
             Style::default()
-                .fg(Color::Yellow)
+                .fg(app.theme.accent)
                 .add_modifier(Modifier::BOLD),
         )]),
         Line::from("  Enter : Open task details"),
@@ -552,14 +556,16 @@ fn draw_help(f: &mut Frame, _app: &mut App) {
         Line::from(vec![Span::styled(
             "Predefined Tags:",
             Style::default()
-                .fg(Color::Yellow)
+                .fg(app.theme.accent)
                 .add_modifier(Modifier::BOLD),
         )]),
         Line::from(vec![
             Span::raw("  "),
             Span::styled(
                 "urgent",
-                Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+                Style::default()
+                    .fg(app.theme.danger)
+                    .add_modifier(Modifier::BOLD),
             ),
             Span::raw("        : Red - High priority"),
         ]),
@@ -568,7 +574,7 @@ fn draw_help(f: &mut Frame, _app: &mut App) {
             Span::styled(
                 "security",
                 Style::default()
-                    .fg(Color::LightRed)
+                    .fg(app.theme.danger)
                     .add_modifier(Modifier::BOLD),
             ),
             Span::raw("      : Light Red - Security work"),
@@ -578,7 +584,7 @@ fn draw_help(f: &mut Frame, _app: &mut App) {
             Span::styled(
                 "bug",
                 Style::default()
-                    .fg(Color::Yellow)
+                    .fg(app.theme.accent)
                     .add_modifier(Modifier::BOLD),
             ),
             Span::raw("           : Yellow - Needs fixing"),
@@ -588,7 +594,7 @@ fn draw_help(f: &mut Frame, _app: &mut App) {
             Span::styled(
                 "feature",
                 Style::default()
-                    .fg(Color::Green)
+                    .fg(app.theme.success)
                     .add_modifier(Modifier::BOLD),
             ),
             Span::raw("       : Green - New feature"),
@@ -638,7 +644,7 @@ fn draw_help(f: &mut Frame, _app: &mut App) {
             Span::styled(
                 "documentation",
                 Style::default()
-                    .fg(Color::Cyan)
+                    .fg(app.theme.primary)
                     .add_modifier(Modifier::BOLD),
             ),
             Span::raw(" : Cyan - Documentation"),
@@ -667,7 +673,7 @@ fn draw_help(f: &mut Frame, _app: &mut App) {
         Line::from(vec![Span::styled(
             "Project Management:",
             Style::default()
-                .fg(Color::Yellow)
+                .fg(app.theme.accent)
                 .add_modifier(Modifier::BOLD),
         )]),
         Line::from("  Ctrl+P : Open project list"),
@@ -678,7 +684,7 @@ fn draw_help(f: &mut Frame, _app: &mut App) {
         Line::from(vec![Span::styled(
             "Other:",
             Style::default()
-                .fg(Color::Yellow)
+                .fg(app.theme.accent)
                 .add_modifier(Modifier::BOLD),
         )]),
         Line::from("  ?     : Show this help"),
@@ -703,7 +709,7 @@ fn draw_project_list(f: &mut Frame, app: &mut App) {
 
     let block = Block::default()
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::Cyan))
+        .border_style(Style::default().fg(app.theme.primary))
         .title(title);
 
     let inner = block.inner(area);
@@ -719,7 +725,7 @@ fn draw_project_list(f: &mut Frame, app: &mut App) {
         };
 
         let input_text = vec![Line::from(vec![
-            Span::styled("New Project Name: ", Style::default().fg(Color::Yellow)),
+            Span::styled("New Project Name: ", Style::default().fg(app.theme.accent)),
             Span::raw(&app.input_buffer),
         ])];
 
@@ -727,9 +733,9 @@ fn draw_project_list(f: &mut Frame, app: &mut App) {
             .block(
                 Block::default()
                     .borders(Borders::ALL)
-                    .border_style(Style::default().fg(Color::Yellow)),
+                    .border_style(Style::default().fg(app.theme.accent)),
             )
-            .style(Style::default().bg(Color::DarkGray));
+            .style(Style::default().bg(app.theme.background_selected));
 
         f.render_widget(input_para, input_area);
     } else {
@@ -738,7 +744,7 @@ fn draw_project_list(f: &mut Frame, app: &mut App) {
             Line::from(Span::styled(
                 "Select a project:",
                 Style::default()
-                    .fg(Color::Cyan)
+                    .fg(app.theme.primary)
                     .add_modifier(Modifier::BOLD),
             )),
             Line::from(""),
@@ -763,7 +769,7 @@ fn draw_project_list(f: &mut Frame, app: &mut App) {
                 spans.push(Span::styled(
                     "> ",
                     Style::default()
-                        .fg(Color::Yellow)
+                        .fg(app.theme.accent)
                         .add_modifier(Modifier::BOLD),
                 ));
             } else {
@@ -775,7 +781,7 @@ fn draw_project_list(f: &mut Frame, app: &mut App) {
                 spans.push(Span::styled(
                     "★ ",
                     Style::default()
-                        .fg(Color::Yellow)
+                        .fg(app.theme.accent)
                         .add_modifier(Modifier::BOLD),
                 ));
             }
@@ -783,14 +789,14 @@ fn draw_project_list(f: &mut Frame, app: &mut App) {
             // Project name
             let style = if is_current {
                 Style::default()
-                    .fg(Color::Green)
+                    .fg(app.theme.success)
                     .add_modifier(Modifier::BOLD)
             } else if is_selected {
                 Style::default()
-                    .fg(Color::White)
+                    .fg(app.theme.text_primary)
                     .add_modifier(Modifier::BOLD)
             } else {
-                Style::default().fg(Color::White)
+                Style::default().fg(app.theme.text_primary)
             };
 
             spans.push(Span::styled(&project.name, style));
@@ -799,7 +805,7 @@ fn draw_project_list(f: &mut Frame, app: &mut App) {
             if is_current {
                 spans.push(Span::styled(
                     " (current)",
-                    Style::default().fg(Color::DarkGray),
+                    Style::default().fg(app.theme.text_secondary),
                 ));
             }
 
@@ -856,58 +862,59 @@ fn draw_delete_confirmation(f: &mut Frame, app: &mut App) {
         Line::from(vec![
             Span::styled(
                 "Delete project ",
-                Style::default().fg(Color::White),
+                Style::default().fg(app.theme.text_primary),
             ),
             Span::styled(
                 format!("'{}'", project_display),
                 Style::default()
-                    .fg(Color::Yellow)
+                    .fg(app.theme.accent)
                     .add_modifier(Modifier::BOLD),
             ),
             Span::styled(
                 format!(" with {} {}?", task_count, task_word),
-                Style::default().fg(Color::White),
+                Style::default().fg(app.theme.text_primary),
             ),
         ]),
         Line::from(""),
-        Line::from(vec![
-            Span::styled(
-                "This action cannot be undone!",
-                Style::default()
-                    .fg(Color::Red)
-                    .add_modifier(Modifier::BOLD),
-            ),
-        ]),
+        Line::from(vec![Span::styled(
+            "This action cannot be undone!",
+            Style::default()
+                .fg(app.theme.danger)
+                .add_modifier(Modifier::BOLD),
+        )]),
         Line::from(""),
         Line::from(vec![
-            Span::styled("Press ", Style::default().fg(Color::DarkGray)),
+            Span::styled("Press ", Style::default().fg(app.theme.text_secondary)),
             Span::styled(
                 "y",
                 Style::default()
-                    .fg(Color::Green)
+                    .fg(app.theme.success)
                     .add_modifier(Modifier::BOLD),
             ),
-            Span::styled(" to confirm, ", Style::default().fg(Color::DarkGray)),
+            Span::styled(
+                " to confirm, ",
+                Style::default().fg(app.theme.text_secondary),
+            ),
             Span::styled(
                 "n",
                 Style::default()
-                    .fg(Color::Red)
+                    .fg(app.theme.danger)
                     .add_modifier(Modifier::BOLD),
             ),
-            Span::styled(" or ", Style::default().fg(Color::DarkGray)),
+            Span::styled(" or ", Style::default().fg(app.theme.text_secondary)),
             Span::styled(
                 "Esc",
                 Style::default()
-                    .fg(Color::Red)
+                    .fg(app.theme.danger)
                     .add_modifier(Modifier::BOLD),
             ),
-            Span::styled(" to cancel", Style::default().fg(Color::DarkGray)),
+            Span::styled(" to cancel", Style::default().fg(app.theme.text_secondary)),
         ]),
     ];
 
     let block = Block::default()
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::Red))
+        .border_style(Style::default().fg(app.theme.danger))
         .title(" Confirm Deletion ")
         .style(Style::default().bg(Color::Black));
 

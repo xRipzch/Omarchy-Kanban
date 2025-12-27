@@ -1,5 +1,6 @@
 use crate::board::{Board, BoardColumn, Project, Task};
 use crate::storage;
+use crate::theme::Theme;
 
 // application state
 pub struct App {
@@ -15,6 +16,7 @@ pub struct App {
     pub input_buffer: String,
     pub focused_field: TaskField,
     pub disable_saving: bool, // For testing
+    pub theme: Theme,
 }
 
 // which field is focused in task detail view
@@ -51,6 +53,13 @@ impl App {
         // Determine which project to start with
         let current_project = Self::determine_initial_project(&projects, &config);
 
+        // Load theme from config
+        let theme = config
+            .theme
+            .as_ref()
+            .and_then(|name| Theme::from_name(name))
+            .unwrap_or_default();
+
         Self {
             projects,
             current_project,
@@ -64,6 +73,7 @@ impl App {
             input_buffer: String::new(),
             focused_field: TaskField::Title,
             disable_saving: false,
+            theme,
         }
     }
 
@@ -104,6 +114,7 @@ impl App {
             input_buffer: String::new(),
             focused_field: TaskField::Title,
             disable_saving: true,
+            theme: Theme::default(),
         }
     }
 
@@ -572,9 +583,8 @@ impl App {
 
     pub fn set_project_as_default(&mut self) {
         let project_name = self.projects[self.selected_project_index].name.clone();
-        let config = storage::Config {
-            default_project: Some(project_name),
-        };
+        let mut config = storage::load_config();
+        config.default_project = Some(project_name);
         let _ = storage::save_config(&config);
     }
 

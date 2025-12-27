@@ -1,6 +1,7 @@
 mod app;
 mod board;
 mod storage;
+mod theme;
 mod ui;
 
 use app::{App, InputMode};
