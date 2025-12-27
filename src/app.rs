@@ -17,6 +17,7 @@ pub struct App {
     pub focused_field: TaskField,
     pub disable_saving: bool, // For testing
     pub theme: Theme,
+    pub selected_theme_index: usize, // for theme selector view
 }
 
 // which field is focused in task detail view
@@ -42,6 +43,7 @@ pub enum InputMode {
     AddingColumn,
     RenamingColumn,
     ConfirmingDelete,
+    SelectingTheme,
 }
 
 impl App {
@@ -74,6 +76,7 @@ impl App {
             focused_field: TaskField::Title,
             disable_saving: false,
             theme,
+            selected_theme_index: 0,
         }
     }
 
@@ -115,6 +118,7 @@ impl App {
             focused_field: TaskField::Title,
             disable_saving: true,
             theme: Theme::default(),
+            selected_theme_index: 0,
         }
     }
 
@@ -467,7 +471,8 @@ impl App {
             | InputMode::ViewingTask
             | InputMode::ViewingHelp
             | InputMode::ProjectList
-            | InputMode::ConfirmingDelete => {}
+            | InputMode::ConfirmingDelete
+            | InputMode::SelectingTheme => {}
         }
         self.cancel_input();
     }
@@ -586,6 +591,54 @@ impl App {
         let mut config = storage::load_config();
         config.default_project = Some(project_name);
         let _ = storage::save_config(&config);
+    }
+
+    // theme management
+    pub fn open_theme_selector(&mut self) {
+        self.input_mode = InputMode::SelectingTheme;
+        // Find current theme index
+        let config = storage::load_config();
+        let current_theme_name = config.theme.as_deref().unwrap_or("high-contrast");
+        let theme_names = Theme::all_theme_names();
+        self.selected_theme_index = theme_names
+            .iter()
+            .position(|&name| name == current_theme_name)
+            .unwrap_or(0);
+    }
+
+    pub fn move_theme_up(&mut self) {
+        let theme_count = Theme::all_theme_names().len();
+        if self.selected_theme_index == 0 {
+            self.selected_theme_index = theme_count - 1;
+        } else {
+            self.selected_theme_index -= 1;
+        }
+    }
+
+    pub fn move_theme_down(&mut self) {
+        let theme_count = Theme::all_theme_names().len();
+        if self.selected_theme_index >= theme_count - 1 {
+            self.selected_theme_index = 0;
+        } else {
+            self.selected_theme_index += 1;
+        }
+    }
+
+    pub fn apply_theme(&mut self) {
+        let theme_names = Theme::all_theme_names();
+        let theme_name = theme_names[self.selected_theme_index];
+
+        // Update app theme
+        self.theme = Theme::from_name(theme_name).unwrap_or_default();
+
+        // Save to config
+        let mut config = storage::load_config();
+        config.theme = Some(theme_name.to_string());
+        let _ = storage::save_config(&config);
+    }
+
+    pub fn close_theme_selector(&mut self) {
+        self.input_mode = InputMode::Normal;
     }
 
     // show help view

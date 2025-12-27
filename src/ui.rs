@@ -31,6 +31,10 @@ pub fn draw(f: &mut Frame, app: &mut App) {
             draw_delete_confirmation(f, app);
             return;
         }
+        InputMode::SelectingTheme => {
+            draw_theme_selector(f, app);
+            return;
+        }
         _ => {}
     }
 
@@ -923,4 +927,91 @@ fn draw_delete_confirmation(f: &mut Frame, app: &mut App) {
         .wrap(Wrap { trim: true });
 
     f.render_widget(para, dialog_area);
+}
+
+// draw theme selector
+fn draw_theme_selector(f: &mut Frame, app: &mut App) {
+    let area = f.area();
+
+    let title = " Select Theme (j/k: navigate | Enter: apply | Esc: cancel) ";
+
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(app.theme.primary))
+        .title(title);
+
+    let inner = block.inner(area);
+    f.render_widget(block, area);
+
+    // Build theme list
+    let mut lines = vec![
+        Line::from(Span::styled(
+            "Choose a theme:",
+            Style::default()
+                .fg(app.theme.primary)
+                .add_modifier(Modifier::BOLD),
+        )),
+        Line::from(""),
+    ];
+
+    // Load config to check for current theme
+    let config = crate::storage::load_config();
+    let current_theme_name = config.theme.as_deref().unwrap_or("high-contrast");
+
+    let theme_names = crate::theme::Theme::all_theme_names();
+
+    for (i, theme_name) in theme_names.iter().enumerate() {
+        let is_selected = i == app.selected_theme_index;
+        let is_current = *theme_name == current_theme_name;
+
+        let mut spans = vec![];
+
+        // Selection indicator
+        if is_selected {
+            spans.push(Span::styled(
+                "> ",
+                Style::default()
+                    .fg(app.theme.accent)
+                    .add_modifier(Modifier::BOLD),
+            ));
+        } else {
+            spans.push(Span::raw("  "));
+        }
+
+        // Current theme indicator
+        if is_current {
+            spans.push(Span::styled(
+                "★ ",
+                Style::default()
+                    .fg(app.theme.success)
+                    .add_modifier(Modifier::BOLD),
+            ));
+        } else {
+            spans.push(Span::raw("  "));
+        }
+
+        // Theme name
+        let style = if is_selected {
+            Style::default()
+                .fg(app.theme.text_primary)
+                .add_modifier(Modifier::BOLD)
+        } else {
+            Style::default().fg(app.theme.text_primary)
+        };
+
+        spans.push(Span::styled(*theme_name, style));
+
+        // Current indicator text
+        if is_current {
+            spans.push(Span::styled(
+                " (active)",
+                Style::default().fg(app.theme.text_secondary),
+            ));
+        }
+
+        lines.push(Line::from(spans));
+    }
+
+    let list_para = Paragraph::new(lines);
+    f.render_widget(list_para, inner);
 }

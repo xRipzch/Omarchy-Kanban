@@ -56,6 +56,16 @@ impl Theme {
         }
     }
 
+    pub fn all_theme_names() -> Vec<&'static str> {
+        vec![
+            "high-contrast",
+            "classic",
+            "solarized-dark",
+            "gruvbox",
+            "nord",
+        ]
+    }
+
     fn high_contrast() -> Self {
         Self {
             primary: Color::Cyan,

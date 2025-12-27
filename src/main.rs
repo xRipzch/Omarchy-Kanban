@@ -60,6 +60,14 @@ fn run_app<B: ratatui::backend::Backend>(
                 continue;
             }
 
+            // Handle Shift+T globally to open theme selector
+            if key.code == KeyCode::Char('T') && key.modifiers.contains(KeyModifiers::SHIFT) {
+                if app.input_mode == InputMode::Normal {
+                    app.open_theme_selector();
+                }
+                continue;
+            }
+
             match app.input_mode {
                 InputMode::Normal => handle_normal_mode(app, key.code),
                 InputMode::AddingTask
@@ -73,6 +81,7 @@ fn run_app<B: ratatui::backend::Backend>(
                 InputMode::ProjectList => handle_project_list_mode(app, key.code),
                 InputMode::AddingProject => handle_adding_project_mode(app, key.code),
                 InputMode::ConfirmingDelete => handle_confirming_delete_mode(app, key.code),
+                InputMode::SelectingTheme => handle_theme_selector_mode(app, key.code),
             }
         }
 
@@ -265,6 +274,20 @@ fn handle_confirming_delete_mode(app: &mut App, key: KeyCode) {
     match key {
         KeyCode::Char('y') | KeyCode::Char('Y') => app.confirm_delete_project(),
         KeyCode::Esc | KeyCode::Char('n') | KeyCode::Char('N') => app.cancel_delete(),
+        _ => {}
+    }
+}
+
+// handle keys when selecting theme
+fn handle_theme_selector_mode(app: &mut App, key: KeyCode) {
+    match key {
+        KeyCode::Char('j') | KeyCode::Down => app.move_theme_down(),
+        KeyCode::Char('k') | KeyCode::Up => app.move_theme_up(),
+        KeyCode::Enter => {
+            app.apply_theme();
+            app.close_theme_selector();
+        }
+        KeyCode::Esc => app.close_theme_selector(),
         _ => {}
     }
 }
