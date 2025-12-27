@@ -39,6 +39,7 @@ pub enum InputMode {
     AddingProject,
     AddingColumn,
     RenamingColumn,
+    ConfirmingDelete,
 }
 
 impl App {
@@ -454,7 +455,8 @@ impl App {
             InputMode::Normal
             | InputMode::ViewingTask
             | InputMode::ViewingHelp
-            | InputMode::ProjectList => {}
+            | InputMode::ProjectList
+            | InputMode::ConfirmingDelete => {}
         }
         self.cancel_input();
     }
@@ -544,7 +546,13 @@ impl App {
         self.input_buffer.clear();
     }
 
-    pub fn delete_project(&mut self) {
+    pub fn start_confirming_delete(&mut self) {
+        if self.projects.len() > 1 {
+            self.input_mode = InputMode::ConfirmingDelete;
+        }
+    }
+
+    pub fn confirm_delete_project(&mut self) {
         if self.projects.len() > 1 {
             self.projects.remove(self.selected_project_index);
             if self.selected_project_index >= self.projects.len() {
@@ -555,6 +563,11 @@ impl App {
             }
             self.save();
         }
+        self.input_mode = InputMode::ProjectList;
+    }
+
+    pub fn cancel_delete(&mut self) {
+        self.input_mode = InputMode::ProjectList;
     }
 
     pub fn set_project_as_default(&mut self) {

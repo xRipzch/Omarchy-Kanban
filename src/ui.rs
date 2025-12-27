@@ -27,6 +27,10 @@ pub fn draw(f: &mut Frame, app: &mut App) {
             draw_project_list(f, app);
             return;
         }
+        InputMode::ConfirmingDelete => {
+            draw_delete_confirmation(f, app);
+            return;
+        }
         _ => {}
     }
 
@@ -805,4 +809,111 @@ fn draw_project_list(f: &mut Frame, app: &mut App) {
         let list_para = Paragraph::new(lines);
         f.render_widget(list_para, inner);
     }
+}
+
+// draw delete confirmation dialog
+fn draw_delete_confirmation(f: &mut Frame, app: &mut App) {
+    // First draw the project list in the background
+    draw_project_list(f, app);
+
+    // Get project info
+    let project = &app.projects[app.selected_project_index];
+    let task_count = project.count_tasks();
+    let config = crate::storage::load_config();
+    let is_default = config
+        .default_project
+        .as_ref()
+        .map(|default| default == &project.name)
+        .unwrap_or(false);
+
+    // Create overlay dialog
+    let area = f.area();
+
+    // Center the dialog
+    let dialog_width = 60.min(area.width - 4);
+    let dialog_height = 8;
+    let dialog_x = (area.width.saturating_sub(dialog_width)) / 2;
+    let dialog_y = (area.height.saturating_sub(dialog_height)) / 2;
+
+    let dialog_area = Rect {
+        x: dialog_x,
+        y: dialog_y,
+        width: dialog_width,
+        height: dialog_height,
+    };
+
+    // Build confirmation message
+    let project_display = if is_default {
+        format!("★ {}", project.name)
+    } else {
+        project.name.clone()
+    };
+
+    let task_word = if task_count == 1 { "task" } else { "tasks" };
+
+    let message = vec![
+        Line::from(""),
+        Line::from(vec![
+            Span::styled(
+                "Delete project ",
+                Style::default().fg(Color::White),
+            ),
+            Span::styled(
+                format!("'{}'", project_display),
+                Style::default()
+                    .fg(Color::Yellow)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                format!(" with {} {}?", task_count, task_word),
+                Style::default().fg(Color::White),
+            ),
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled(
+                "This action cannot be undone!",
+                Style::default()
+                    .fg(Color::Red)
+                    .add_modifier(Modifier::BOLD),
+            ),
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("Press ", Style::default().fg(Color::DarkGray)),
+            Span::styled(
+                "y",
+                Style::default()
+                    .fg(Color::Green)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(" to confirm, ", Style::default().fg(Color::DarkGray)),
+            Span::styled(
+                "n",
+                Style::default()
+                    .fg(Color::Red)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(" or ", Style::default().fg(Color::DarkGray)),
+            Span::styled(
+                "Esc",
+                Style::default()
+                    .fg(Color::Red)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(" to cancel", Style::default().fg(Color::DarkGray)),
+        ]),
+    ];
+
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(Color::Red))
+        .title(" Confirm Deletion ")
+        .style(Style::default().bg(Color::Black));
+
+    let para = Paragraph::new(message)
+        .block(block)
+        .wrap(Wrap { trim: true });
+
+    f.render_widget(para, dialog_area);
 }

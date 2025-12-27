@@ -23,6 +23,11 @@ impl Project {
             board: Board::new(),
         }
     }
+
+    // Count total tasks in this project
+    pub fn count_tasks(&self) -> usize {
+        self.board.columns.iter().map(|col| col.tasks.len()).sum()
+    }
 }
 
 impl Task {
