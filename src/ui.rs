@@ -694,7 +694,7 @@ fn draw_project_list(f: &mut Frame, app: &mut App) {
     let title = if is_adding {
         " Projects - ADD NEW (Enter to save, Esc to cancel) "
     } else {
-        " Projects (j/k: navigate | Enter: select | a: add | d: delete | Esc: cancel) "
+        " Projects (j/k: navigate | Enter: select | a: add | d: delete | s: set default | Esc: cancel) "
     };
 
     let block = Block::default()
@@ -740,9 +740,17 @@ fn draw_project_list(f: &mut Frame, app: &mut App) {
             Line::from(""),
         ];
 
+        // Load config to check for default project
+        let config = crate::storage::load_config();
+
         for (i, project) in app.projects.iter().enumerate() {
             let is_selected = i == app.selected_project_index;
             let is_current = i == app.current_project;
+            let is_default = config
+                .default_project
+                .as_ref()
+                .map(|default| default == &project.name)
+                .unwrap_or(false);
 
             let mut spans = vec![];
 
@@ -756,6 +764,16 @@ fn draw_project_list(f: &mut Frame, app: &mut App) {
                 ));
             } else {
                 spans.push(Span::raw("  "));
+            }
+
+            // Default indicator
+            if is_default {
+                spans.push(Span::styled(
+                    "★ ",
+                    Style::default()
+                        .fg(Color::Yellow)
+                        .add_modifier(Modifier::BOLD),
+                ));
             }
 
             // Project name
