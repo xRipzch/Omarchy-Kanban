@@ -691,8 +691,9 @@ fn draw_help(f: &mut Frame, app: &mut App) {
                 .fg(app.theme.accent)
                 .add_modifier(Modifier::BOLD),
         )]),
-        Line::from("  ?     : Show this help"),
-        Line::from("  q     : Quit application"),
+        Line::from("  Shift+T : Change theme"),
+        Line::from("  ?       : Show this help"),
+        Line::from("  q       : Quit application"),
     ];
 
     let help_para = Paragraph::new(help_text);
