@@ -4,6 +4,13 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
 
+// Config struct for storing application settings
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct Config {
+    pub default_project: Option<String>,
+    pub theme: Option<String>,
+}
+
 // This struct represents the old Board structure for migration purposes
 #[derive(Deserialize, Serialize, Debug, Clone)]
 struct LegacyBoard {
@@ -60,7 +67,7 @@ impl From<LegacyProject> for Project {
     }
 }
 
-// get path to config file
+// get path to projects file
 fn get_config_path() -> PathBuf {
     // ProjectDirs auto find config
     if let Some(proj_dirs) = ProjectDirs::from("", "", "tui-kanban") {
@@ -72,6 +79,17 @@ fn get_config_path() -> PathBuf {
     } else {
         // fallback
         PathBuf::from("projects.json")
+    }
+}
+
+// get path to config.json file
+fn get_app_config_path() -> PathBuf {
+    if let Some(proj_dirs) = ProjectDirs::from("", "", "tui-kanban") {
+        let config_dir = proj_dirs.config_dir();
+        fs::create_dir_all(config_dir).ok();
+        config_dir.join("config.json")
+    } else {
+        PathBuf::from("config.json")
     }
 }
 
@@ -149,4 +167,42 @@ pub fn load_projects() -> Vec<Project> {
     // 4. Fallback: incase non exist - return default project in NEW format
     let default_project = Project::new("Default".to_string());
     vec![default_project]
+}
+
+/// save config to disc
+pub fn save_config(config: &Config) -> Result<(), Box<dyn std::error::Error>> {
+    let path = get_app_config_path();
+    let json = serde_json::to_string_pretty(config)?;
+    fs::write(path, json)?;
+    Ok(())
+}
+
+/// load config from disc
+pub fn load_config() -> Config {
+    let path = get_app_config_path();
+
+    if path.exists() {
+        if let Ok(content) = fs::read_to_string(&path) {
+            if let Ok(config) = serde_json::from_str::<Config>(&content) {
+                return config;
+            }
+        }
+    }
+
+    // Return default config if file doesn't exist or can't be read
+    Config {
+        default_project: None,
+        theme: Some("high-contrast".to_string()),
+    }
+}
+
+/// check current directory for .tui-kanban-project file
+pub fn get_directory_project() -> Option<String> {
+    if let Ok(content) = fs::read_to_string(".tui-kanban-project") {
+        let project_name = content.trim().to_string();
+        if !project_name.is_empty() {
+            return Some(project_name);
+        }
+    }
+    None
 }

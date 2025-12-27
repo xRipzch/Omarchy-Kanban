@@ -1,5 +1,6 @@
 use crate::board::{Board, BoardColumn, Project, Task};
 use crate::storage;
+use crate::theme::Theme;
 
 // application state
 pub struct App {
@@ -15,6 +16,7 @@ pub struct App {
     pub input_buffer: String,
     pub focused_field: TaskField,
     pub disable_saving: bool, // For testing
+    pub theme: Theme,
 }
 
 // which field is focused in task detail view
@@ -39,15 +41,29 @@ pub enum InputMode {
     AddingProject,
     AddingColumn,
     RenamingColumn,
+    ConfirmingDelete,
 }
 
 impl App {
     // create new app state
     pub fn new() -> Self {
+        let projects = storage::load_projects();
+        let config = storage::load_config();
+
+        // Determine which project to start with
+        let current_project = Self::determine_initial_project(&projects, &config);
+
+        // Load theme from config
+        let theme = config
+            .theme
+            .as_ref()
+            .and_then(|name| Theme::from_name(name))
+            .unwrap_or_default();
+
         Self {
-            projects: storage::load_projects(),
-            current_project: 0,
-            selected_project_index: 0,
+            projects,
+            current_project,
+            selected_project_index: current_project,
             selected_column: 0, // Default to the first column
             selected_index: 0,
             scroll_offset: 0,
@@ -57,7 +73,31 @@ impl App {
             input_buffer: String::new(),
             focused_field: TaskField::Title,
             disable_saving: false,
+            theme,
         }
+    }
+
+    // Determine which project to start with based on priority:
+    // 1. Directory-specific .tui-kanban-project file
+    // 2. Global default from config.json
+    // 3. First project (index 0)
+    fn determine_initial_project(projects: &[Project], config: &storage::Config) -> usize {
+        // Priority 1: Check for directory-specific project file
+        if let Some(dir_project_name) = storage::get_directory_project() {
+            if let Some(index) = projects.iter().position(|p| p.name == dir_project_name) {
+                return index;
+            }
+        }
+
+        // Priority 2: Check config for default project
+        if let Some(default_name) = &config.default_project {
+            if let Some(index) = projects.iter().position(|p| p.name == *default_name) {
+                return index;
+            }
+        }
+
+        // Priority 3: Default to first project
+        0
     }
 
     pub fn new_with_projects(projects: Vec<Project>) -> Self {
@@ -74,6 +114,7 @@ impl App {
             input_buffer: String::new(),
             focused_field: TaskField::Title,
             disable_saving: true,
+            theme: Theme::default(),
         }
     }
 
@@ -425,7 +466,8 @@ impl App {
             InputMode::Normal
             | InputMode::ViewingTask
             | InputMode::ViewingHelp
-            | InputMode::ProjectList => {}
+            | InputMode::ProjectList
+            | InputMode::ConfirmingDelete => {}
         }
         self.cancel_input();
     }
@@ -515,7 +557,13 @@ impl App {
         self.input_buffer.clear();
     }
 
-    pub fn delete_project(&mut self) {
+    pub fn start_confirming_delete(&mut self) {
+        if self.projects.len() > 1 {
+            self.input_mode = InputMode::ConfirmingDelete;
+        }
+    }
+
+    pub fn confirm_delete_project(&mut self) {
         if self.projects.len() > 1 {
             self.projects.remove(self.selected_project_index);
             if self.selected_project_index >= self.projects.len() {
@@ -526,6 +574,18 @@ impl App {
             }
             self.save();
         }
+        self.input_mode = InputMode::ProjectList;
+    }
+
+    pub fn cancel_delete(&mut self) {
+        self.input_mode = InputMode::ProjectList;
+    }
+
+    pub fn set_project_as_default(&mut self) {
+        let project_name = self.projects[self.selected_project_index].name.clone();
+        let mut config = storage::load_config();
+        config.default_project = Some(project_name);
+        let _ = storage::save_config(&config);
     }
 
     // show help view

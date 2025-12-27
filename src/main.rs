@@ -1,6 +1,7 @@
 mod app;
 mod board;
 mod storage;
+mod theme;
 mod ui;
 
 use app::{App, InputMode};
@@ -71,6 +72,7 @@ fn run_app<B: ratatui::backend::Backend>(
                 InputMode::ViewingHelp => handle_viewing_help_mode(app, key.code),
                 InputMode::ProjectList => handle_project_list_mode(app, key.code),
                 InputMode::AddingProject => handle_adding_project_mode(app, key.code),
+                InputMode::ConfirmingDelete => handle_confirming_delete_mode(app, key.code),
             }
         }
 
@@ -238,7 +240,8 @@ fn handle_project_list_mode(app: &mut App, key: KeyCode) {
         KeyCode::Char('k') | KeyCode::Up => app.move_project_up(),
         KeyCode::Enter => app.select_project(),
         KeyCode::Char('a') => app.start_adding_project(),
-        KeyCode::Char('d') => app.delete_project(),
+        KeyCode::Char('d') => app.start_confirming_delete(),
+        KeyCode::Char('s') => app.set_project_as_default(),
         _ => {}
     }
 }
@@ -253,6 +256,15 @@ fn handle_adding_project_mode(app: &mut App, key: KeyCode) {
         }
         KeyCode::Backspace => app.input_backspace(),
         KeyCode::Char(c) => app.input_char(c),
+        _ => {}
+    }
+}
+
+// handle keys when confirming project deletion
+fn handle_confirming_delete_mode(app: &mut App, key: KeyCode) {
+    match key {
+        KeyCode::Char('y') | KeyCode::Char('Y') => app.confirm_delete_project(),
+        KeyCode::Esc | KeyCode::Char('n') | KeyCode::Char('N') => app.cancel_delete(),
         _ => {}
     }
 }

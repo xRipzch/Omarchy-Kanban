@@ -87,6 +87,7 @@ tui-kanban
 - **Enter** - Select project
 - **a** - Add new project
 - **d** - Delete project
+- **s** - Set selected project as default
 - **Esc** - Close project list
 
 ### Tags
@@ -114,10 +115,64 @@ Projects and tasks are automatically saved to:
 
 If you're migrating from an older version, your data will be automatically migrated from the old location.
 
+## Default Projects
+
+TUI-Kanban supports setting a default project that opens automatically when you launch the application. There are two ways to set a default project:
+
+### Global Default (Recommended for most users)
+
+Set a project as default globally using the project list (Ctrl+P):
+1. Press **Ctrl+P** to open the project list
+2. Navigate to your desired project using **j/k** or arrow keys
+3. Press **s** to set it as the default project
+
+Your choice is saved to `~/.config/tui-kanban/config.json` and will apply everywhere.
+
+### Directory-Specific Default
+
+For advanced workflows where you work on multiple projects in different directories, you can create a `.tui-kanban-project` file in any directory:
+
+```bash
+# In your project directory
+echo "MyProject" > .tui-kanban-project
+```
+
+When you run `tui-kanban` from that directory, it will automatically open "MyProject".
+
+**Priority order:**
+1. Directory-specific `.tui-kanban-project` file (if present in current directory)
+2. Global default from `config.json` (set via 's' in project list)
+3. First project in the list (default behavior)
+
 
 https://github.com/user-attachments/assets/fa467298-e3c5-4770-b4b5-c40280f6f9ab
 
+## Themes
 
+TUI-Kanban supports multiple color themes to match your terminal preferences and improve readability. You can change the theme by editing your config file.
+
+### Available Themes
+
+- **high-contrast** (Default) - Bright, bold colors for maximum visibility on any terminal theme
+- **classic** - Traditional color scheme with improved contrast over the original
+- **solarized-dark** - Popular Solarized palette designed for reduced eye strain
+- **gruvbox** - Warm, retro color scheme with earthy tones
+- **nord** - Cool, arctic-inspired colors from the Nord palette
+
+### Changing Your Theme
+
+Edit your configuration file at `~/.config/tui-kanban/config.json` (Linux/macOS) or `%APPDATA%\tui-kanban\config.json` (Windows):
+
+```json
+{
+  "theme": "nord",
+  "default_project": "Work"
+}
+```
+
+Available theme names: `high-contrast`, `classic`, `solarized-dark`, `gruvbox`, `nord`
+
+Changes take effect the next time you launch tui-kanban. If the theme name is invalid or not specified, it will default to `high-contrast`.
 
 ## Contributors
 
