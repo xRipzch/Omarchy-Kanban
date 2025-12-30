@@ -135,18 +135,11 @@ fn handle_normal_mode(app: &mut App, key: KeyCode) {
         }
 
         // Column Management (Shift+...)
-        KeyCode::Char('H')
-        | KeyCode::Char('L')
-        | KeyCode::Char('C')
-        | KeyCode::Char('R')
-        | KeyCode::Char('D') => match key {
             KeyCode::Char('H') => app.move_column_left(),
             KeyCode::Char('L') => app.move_column_right(),
             KeyCode::Char('C') => app.start_adding_column(),
             KeyCode::Char('R') => app.start_renaming_column(),
             KeyCode::Char('D') => app.delete_column(),
-            _ => {}
-        },
 
         // Actions
         KeyCode::Enter => app.open_task(),
