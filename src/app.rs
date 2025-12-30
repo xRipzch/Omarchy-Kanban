@@ -496,6 +496,15 @@ impl App {
         };
     }
 
+    // cycle to previous field in task detail view
+    pub fn previous_field(&mut self) {
+        self.focused_field = match self.focused_field {
+            TaskField::Title => TaskField::Description,
+            TaskField::Description => TaskField::Tags,
+            TaskField::Tags => TaskField::Title,
+        }
+    }
+
     // start editing title
     pub fn start_editing_title(&mut self) {
         if let Some(column) = self.board().get_column(self.selected_column) {

@@ -349,7 +349,7 @@ fn draw_task_detail(f: &mut Frame, app: &mut App) {
     } else if is_editing_description {
         " Task Details - EDITING DESCRIPTION (Enter for newline, Esc to save) "
     } else {
-        " Task Details (Tab: switch field | Enter: edit | 1-9: remove tag | Esc: close) "
+        " Task Details (Tab/j: next field | S+Tab/k: previous field | Enter: edit | 1-9: remove tag | Esc: close) "
     };
 
     let block = Block::default()

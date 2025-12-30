@@ -72,7 +72,7 @@ tui-kanban
 - **q** - Quit the application
 
 #### Task Detail View
-- **Tab** - Switch between fields (Title, Tags, Description)
+- **Tab or j/ Shift+Tab or k** - Switch between fields forwards/ backwards(Title, Tags, Description)
 - **Enter** - Edit focused field
 - **1-9** - Remove tag by number (when Tags field is focused)
 - **Esc** - Close task detail view

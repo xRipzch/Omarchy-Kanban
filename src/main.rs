@@ -171,7 +171,8 @@ fn handle_viewing_task_mode(app: &mut App, key: KeyCode) {
 
     match key {
         KeyCode::Esc => app.close_view(),
-        KeyCode::Tab => app.next_field(),
+        KeyCode::Tab | KeyCode::Char('j') => app.next_field(),
+        KeyCode::BackTab | KeyCode::Char('k') => app.previous_field(),
         KeyCode::Enter => {
             // Start editing based on focused field
             match app.focused_field {
