@@ -46,6 +46,20 @@ pub enum InputMode {
     SelectingTheme,
 }
 
+impl InputMode {
+    pub fn has_open_input(&self) -> bool {
+        match self {
+            Self::AddingTask
+            | Self::AddingTag
+            | Self::EditingTitle
+            | Self::EditingDescription
+            | Self::RenamingColumn
+            | Self::AddingProject => true,
+            _ => false,
+        }
+    }
+}
+
 impl App {
     // create new app state
     pub fn new() -> Self {
@@ -378,6 +392,13 @@ impl App {
         self.input_buffer.pop();
     }
 
+    // Open the external editor defined in $EDITOR
+    pub fn open_external_editor(&mut self) {
+        if let Ok(edited) = edit::edit(&self.input_buffer) {
+            self.input_buffer = edited;
+        }
+    }
+
     // submit input
     pub fn submit_input(&mut self) {
         match self.input_mode {
@@ -494,6 +515,15 @@ impl App {
             TaskField::Tags => TaskField::Description,
             TaskField::Description => TaskField::Title,
         };
+    }
+
+    // cycle to previous field in task detail view
+    pub fn previous_field(&mut self) {
+        self.focused_field = match self.focused_field {
+            TaskField::Title => TaskField::Description,
+            TaskField::Description => TaskField::Tags,
+            TaskField::Tags => TaskField::Title,
+        }
     }
 
     // start editing title
