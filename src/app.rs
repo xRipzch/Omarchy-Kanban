@@ -46,6 +46,20 @@ pub enum InputMode {
     SelectingTheme,
 }
 
+impl InputMode {
+    pub fn has_open_input(&self) -> bool {
+        match self {
+            Self::AddingTask
+            | Self::AddingTag
+            | Self::EditingTitle
+            | Self::EditingDescription
+            | Self::RenamingColumn
+            | Self::AddingProject => true,
+            _ => false,
+        }
+    }
+}
+
 impl App {
     // create new app state
     pub fn new() -> Self {
@@ -376,6 +390,13 @@ impl App {
     // del last character from input buffer
     pub fn input_backspace(&mut self) {
         self.input_buffer.pop();
+    }
+
+    // Open the external editor defined in $EDITOR
+    pub fn open_external_editor(&mut self) {
+        if let Ok(edited) = edit::edit(&self.input_buffer) {
+            self.input_buffer = edited;
+        }
     }
 
     // submit input

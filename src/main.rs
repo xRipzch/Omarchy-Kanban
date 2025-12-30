@@ -42,7 +42,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 // main loop
-fn run_app<B: ratatui::backend::Backend>(
+fn run_app<B: ratatui::backend::Backend + std::io::Write>(
     terminal: &mut Terminal<B>,
     app: &mut App,
 ) -> io::Result<()> {
@@ -66,6 +66,14 @@ fn run_app<B: ratatui::backend::Backend>(
                     app.open_theme_selector();
                 }
                 continue;
+            }
+
+            if app.input_mode.has_open_input() {
+                if key.code == KeyCode::Char('e') && key.modifiers.contains(KeyModifiers::CONTROL) {
+                    // We do not need the return value here
+                    let _ = execute_external(terminal, || app.open_external_editor());
+                    continue;
+                }
             }
 
             match app.input_mode {
@@ -135,11 +143,11 @@ fn handle_normal_mode(app: &mut App, key: KeyCode) {
         }
 
         // Column Management (Shift+...)
-            KeyCode::Char('H') => app.move_column_left(),
-            KeyCode::Char('L') => app.move_column_right(),
-            KeyCode::Char('C') => app.start_adding_column(),
-            KeyCode::Char('R') => app.start_renaming_column(),
-            KeyCode::Char('D') => app.delete_column(),
+        KeyCode::Char('H') => app.move_column_left(),
+        KeyCode::Char('L') => app.move_column_right(),
+        KeyCode::Char('C') => app.start_adding_column(),
+        KeyCode::Char('R') => app.start_renaming_column(),
+        KeyCode::Char('D') => app.delete_column(),
 
         // Actions
         KeyCode::Enter => app.open_task(),
@@ -284,4 +292,29 @@ fn handle_theme_selector_mode(app: &mut App, key: KeyCode) {
         KeyCode::Esc => app.close_theme_selector(),
         _ => {}
     }
+}
+
+fn execute_external<F, B>(terminal: &mut Terminal<B>, f: F) -> io::Result<()>
+where
+    F: FnOnce(),
+    B: ratatui::backend::Backend + std::io::Write,
+{
+    disable_raw_mode()?;
+    execute!(
+        terminal.backend_mut(),
+        LeaveAlternateScreen,
+        crossterm::cursor::Show
+    )?;
+
+    f();
+
+    enable_raw_mode()?;
+    execute!(
+        terminal.backend_mut(),
+        EnterAlternateScreen,
+        crossterm::cursor::Hide
+    )?;
+    terminal.clear()?;
+
+    Ok(())
 }
