@@ -180,6 +180,7 @@ Changes take effect the next time you launch tui-kanban. If the theme name is in
 
 Special thanks to:
 - [@mdetweil](https://github.com/mdetweil) - Customizable columns feature, tests, and CI/CD setup
+- [@papitz](https://github.com/papitz) - Fixed Shift+T keybinding conflict preventing capital T input in text fields
 
 ## Contributing
 
