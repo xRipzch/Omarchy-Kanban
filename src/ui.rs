@@ -1,5 +1,7 @@
 use crate::app::{App, InputMode};
-use crate::board::{BoardColumn, Task}; // Removed Board as it's not directly used here
+use crate::board::{BoardColumn, Task};
+use ratatui::widgets::Clear;
+// Removed Board as it's not directly used here
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
@@ -56,6 +58,10 @@ pub fn draw(f: &mut Frame, app: &mut App) {
 
     // footer with help text or input field
     draw_footer(f, app, chunks[2]);
+
+    if app.input_mode == InputMode::ShowErrorInfo {
+        draw_error_popup(f, app);
+    }
 }
 
 // draw header with f and app (immutable)
@@ -345,11 +351,11 @@ fn draw_task_detail(f: &mut Frame, app: &mut App) {
 
     // create main container with context-aware title
     let title = if is_editing_title {
-        " Task Details - EDITING TITLE (Enter to save, Esc to cancel) "
+        " Task Details - EDITING TITLE (Enter to save, Esc to cancel, Ctrl+e: external-editor) "
     } else if is_editing_description {
-        " Task Details - EDITING DESCRIPTION (Enter for newline, Esc to save) "
+        " Task Details - EDITING DESCRIPTION (Enter for newline, Esc to save, Ctrl+e: external-editor) "
     } else {
-        " Task Details (Tab: switch field | Enter: edit | 1-9: remove tag | Esc: close) "
+        " Task Details (Tab/j: next field | Shift+Tab/k: previous field | Enter: edit | 1-9: remove tag | Esc: close) "
     };
 
     let block = Block::default()
@@ -927,6 +933,52 @@ fn draw_delete_confirmation(f: &mut Frame, app: &mut App) {
         .block(block)
         .wrap(Wrap { trim: true });
 
+    f.render_widget(para, dialog_area);
+}
+
+// draw a popup showing error info
+fn draw_error_popup(f: &mut Frame, app: &mut App) {
+    let area = f.area();
+    let dialog_width = 70.min(area.width - 4);
+    let dialog_height = 10;
+    let dialog_x = (area.width.saturating_sub(dialog_width)) / 2;
+    let dialog_y = (area.height.saturating_sub(dialog_height)) / 2;
+
+    let dialog_area = Rect {
+        x: dialog_x,
+        y: dialog_y,
+        width: dialog_width,
+        height: dialog_height,
+    };
+
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(app.theme.danger))
+        .title(" Error ")
+        .style(Style::default().bg(Color::Black));
+
+    let message = vec![
+        Line::from(""),
+        Line::from(vec![Span::styled(
+            "An error occurred:",
+            Style::default()
+                .fg(app.theme.danger)
+                .add_modifier(Modifier::BOLD),
+        )]),
+        Line::from(""),
+        Line::from(Span::raw(&app.error_message)),
+        Line::from(""),
+        Line::from(vec![Span::styled(
+            "Press Esc or Enter to close this message.",
+            Style::default().fg(app.theme.text_secondary),
+        )]),
+    ];
+
+    let para = Paragraph::new(message)
+        .block(block)
+        .wrap(Wrap { trim: true });
+
+    f.render_widget(Clear, dialog_area);
     f.render_widget(para, dialog_area);
 }
 

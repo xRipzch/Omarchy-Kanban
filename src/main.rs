@@ -42,7 +42,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 // main loop
-fn run_app<B: ratatui::backend::Backend>(
+fn run_app<B: ratatui::backend::Backend + std::io::Write>(
     terminal: &mut Terminal<B>,
     app: &mut App,
 ) -> io::Result<()> {
@@ -68,6 +68,14 @@ fn run_app<B: ratatui::backend::Backend>(
                 continue;
             }
 
+            if app.input_mode.has_open_input() {
+                if key.code == KeyCode::Char('e') && key.modifiers.contains(KeyModifiers::CONTROL) {
+                    // We do not need the return value here
+                    let _ = execute_external(terminal, || app.open_external_editor());
+                    continue;
+                }
+            }
+
             match app.input_mode {
                 InputMode::Normal => handle_normal_mode(app, key.code),
                 InputMode::AddingTask
@@ -82,6 +90,7 @@ fn run_app<B: ratatui::backend::Backend>(
                 InputMode::AddingProject => handle_adding_project_mode(app, key.code),
                 InputMode::ConfirmingDelete => handle_confirming_delete_mode(app, key.code),
                 InputMode::SelectingTheme => handle_theme_selector_mode(app, key.code),
+                InputMode::ShowErrorInfo => handle_error_info_mode(app, key.code),
             }
         }
 
@@ -135,18 +144,11 @@ fn handle_normal_mode(app: &mut App, key: KeyCode) {
         }
 
         // Column Management (Shift+...)
-        KeyCode::Char('H')
-        | KeyCode::Char('L')
-        | KeyCode::Char('C')
-        | KeyCode::Char('R')
-        | KeyCode::Char('D') => match key {
-            KeyCode::Char('H') => app.move_column_left(),
-            KeyCode::Char('L') => app.move_column_right(),
-            KeyCode::Char('C') => app.start_adding_column(),
-            KeyCode::Char('R') => app.start_renaming_column(),
-            KeyCode::Char('D') => app.delete_column(),
-            _ => {}
-        },
+        KeyCode::Char('H') => app.move_column_left(),
+        KeyCode::Char('L') => app.move_column_right(),
+        KeyCode::Char('C') => app.start_adding_column(),
+        KeyCode::Char('R') => app.start_renaming_column(),
+        KeyCode::Char('D') => app.delete_column(),
 
         // Actions
         KeyCode::Enter => app.open_task(),
@@ -178,7 +180,8 @@ fn handle_viewing_task_mode(app: &mut App, key: KeyCode) {
 
     match key {
         KeyCode::Esc => app.close_view(),
-        KeyCode::Tab => app.next_field(),
+        KeyCode::Tab | KeyCode::Char('j') => app.next_field(),
+        KeyCode::BackTab | KeyCode::Char('k') => app.previous_field(),
         KeyCode::Enter => {
             // Start editing based on focused field
             match app.focused_field {
@@ -290,4 +293,36 @@ fn handle_theme_selector_mode(app: &mut App, key: KeyCode) {
         KeyCode::Esc => app.close_theme_selector(),
         _ => {}
     }
+}
+
+fn handle_error_info_mode(app: &mut App, key: KeyCode) {
+    match key {
+        KeyCode::Esc | KeyCode::Enter => app.close_error_info(),
+        _ => {}
+    }
+}
+
+fn execute_external<F, B>(terminal: &mut Terminal<B>, f: F) -> io::Result<()>
+where
+    F: FnOnce(),
+    B: ratatui::backend::Backend + std::io::Write,
+{
+    disable_raw_mode()?;
+    execute!(
+        terminal.backend_mut(),
+        LeaveAlternateScreen,
+        crossterm::cursor::Show
+    )?;
+
+    f();
+
+    enable_raw_mode()?;
+    execute!(
+        terminal.backend_mut(),
+        EnterAlternateScreen,
+        crossterm::cursor::Hide
+    )?;
+    terminal.clear()?;
+
+    Ok(())
 }
