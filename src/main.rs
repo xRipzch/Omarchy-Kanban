@@ -90,6 +90,7 @@ fn run_app<B: ratatui::backend::Backend + std::io::Write>(
                 InputMode::AddingProject => handle_adding_project_mode(app, key.code),
                 InputMode::ConfirmingDelete => handle_confirming_delete_mode(app, key.code),
                 InputMode::SelectingTheme => handle_theme_selector_mode(app, key.code),
+                InputMode::ShowErrorInfo => handle_error_info_mode(app, key.code),
             }
         }
 
@@ -290,6 +291,13 @@ fn handle_theme_selector_mode(app: &mut App, key: KeyCode) {
             app.close_theme_selector();
         }
         KeyCode::Esc => app.close_theme_selector(),
+        _ => {}
+    }
+}
+
+fn handle_error_info_mode(app: &mut App, key: KeyCode) {
+    match key {
+        KeyCode::Esc | KeyCode::Enter => app.close_error_info(),
         _ => {}
     }
 }

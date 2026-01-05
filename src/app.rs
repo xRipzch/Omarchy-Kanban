@@ -18,6 +18,7 @@ pub struct App {
     pub disable_saving: bool, // For testing
     pub theme: Theme,
     pub selected_theme_index: usize, // for theme selector view
+    pub error_message: String,
 }
 
 // which field is focused in task detail view
@@ -44,6 +45,7 @@ pub enum InputMode {
     RenamingColumn,
     ConfirmingDelete,
     SelectingTheme,
+    ShowErrorInfo,
 }
 
 impl InputMode {
@@ -91,6 +93,7 @@ impl App {
             disable_saving: false,
             theme,
             selected_theme_index: 0,
+            error_message: String::new(),
         }
     }
 
@@ -133,6 +136,7 @@ impl App {
             disable_saving: true,
             theme: Theme::default(),
             selected_theme_index: 0,
+            error_message: String::new(),
         }
     }
 
@@ -394,9 +398,16 @@ impl App {
 
     // Open the external editor defined in $EDITOR
     pub fn open_external_editor(&mut self) {
-        if let Ok(edited) = edit::edit(&self.input_buffer) {
-            self.input_buffer = edited;
+        match edit::edit(&self.input_buffer) {
+            Ok(edited) => self.input_buffer = edited,
+            Err(e) => self.handle_error(e.to_string()),
         }
+    }
+
+    // handle error by switching to error info mode
+    fn handle_error(&mut self, error_message: String) {
+        self.error_message = error_message;
+        self.input_mode = InputMode::ShowErrorInfo;
     }
 
     // submit input
@@ -493,7 +504,8 @@ impl App {
             | InputMode::ViewingHelp
             | InputMode::ProjectList
             | InputMode::ConfirmingDelete
-            | InputMode::SelectingTheme => {}
+            | InputMode::SelectingTheme
+            | InputMode::ShowErrorInfo => {}
         }
         self.cancel_input();
     }
@@ -669,6 +681,12 @@ impl App {
 
     pub fn close_theme_selector(&mut self) {
         self.input_mode = InputMode::Normal;
+    }
+
+    //  TODO: This should probably go back to the last mode instead of always Normal
+    pub fn close_error_info(&mut self) {
+        self.input_mode = InputMode::Normal;
+        self.error_message.clear();
     }
 
     // show help view

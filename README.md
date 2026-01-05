@@ -76,7 +76,8 @@ In any field while you are editing.
 - **ctrl+e** - Open external editor ($EDITOR) 
 
 #### Task Detail View
-- **Tab or j/ Shift+Tab or k** - Switch between fields forwards/ backwards(Title, Tags, Description)
+- **Tab or j** - Next field
+- **Shift+Tab or k** - Previous field
 - **Enter** - Edit focused field
 - **1-9** - Remove tag by number (when Tags field is focused)
 - **Esc** - Close task detail view
