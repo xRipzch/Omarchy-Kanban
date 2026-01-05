@@ -351,11 +351,11 @@ fn draw_task_detail(f: &mut Frame, app: &mut App) {
 
     // create main container with context-aware title
     let title = if is_editing_title {
-        " Task Details - EDITING TITLE (Enter to save, Esc to cancel) "
+        " Task Details - EDITING TITLE (Enter to save, Esc to cancel, Ctrl+e: external-editor) "
     } else if is_editing_description {
-        " Task Details - EDITING DESCRIPTION (Enter for newline, Esc to save) "
+        " Task Details - EDITING DESCRIPTION (Enter for newline, Esc to save, Ctrl+e: external-editor) "
     } else {
-        " Task Details (Tab/j: next field | S+Tab/k: previous field | Enter: edit | 1-9: remove tag | Esc: close) "
+        " Task Details (Tab/j: next field | Shift+Tab/k: previous field | Enter: edit | 1-9: remove tag | Esc: close) "
     };
 
     let block = Block::default()
